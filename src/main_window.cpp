@@ -472,6 +472,8 @@ void MainWindow::buildProject()
     }
 
     CommandDialog build(this, QStringLiteral("Build %1").arg(m_platform->currentText()), m_project.directory(), commands);
+    build.offerToOpen(QStringLiteral("Open Build Folder"),
+                      QDir(m_project.directory()).filePath(m_buildDirectory->text()));
     build.exec();
 
     statusBar()->showMessage(build.succeeded()
