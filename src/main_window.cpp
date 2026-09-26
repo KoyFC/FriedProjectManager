@@ -4,6 +4,7 @@
 #include "new_project_dialog.h"
 #include "project_template.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -14,12 +15,14 @@
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QSettings>
 #include <QStatusBar>
 #include <QVBoxLayout>
 
 namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
+    const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
 
     enum Platform
     {
@@ -106,8 +109,42 @@ QString MainWindow::nearbyLocation() const
     return QDir::cleanPath(QDir(m_project.directory()).filePath(QStringLiteral("..")));
 }
 
+bool MainWindow::confirmGitNotice()
+{
+    QSettings settings;
+    if (!settings.value(s_gitNoticeKey, true).toBool())
+    {
+        return true;
+    }
+
+    QMessageBox notice(QMessageBox::Information, QStringLiteral("New Project"),
+                       QStringLiteral("A new project is a Git repository with Fried Engine as a submodule, so creating one "
+                                      "runs git and clones the engine.\n\ngit must be installed, and it needs to be able "
+                                      "to reach the engine repository."),
+                       QMessageBox::Ok | QMessageBox::Cancel, this);
+    QCheckBox *hide = new QCheckBox(QStringLiteral("Don't show this again"), &notice);
+    notice.setCheckBox(hide);
+
+    if (notice.exec() != QMessageBox::Ok)
+    {
+        return false;
+    }
+
+    if (hide->isChecked())
+    {
+        settings.setValue(s_gitNoticeKey, false);
+    }
+
+    return true;
+}
+
 void MainWindow::newProject()
 {
+    if (!confirmGitNotice())
+    {
+        return;
+    }
+
     NewProjectDialog dialog(this, nearbyLocation());
     if (dialog.exec() != QDialog::Accepted)
     {

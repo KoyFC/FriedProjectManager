@@ -25,6 +25,7 @@ private:
     QLineEdit *addField(const QString &label);
 
     void newProject();
+    bool confirmGitNotice();
     void chooseProject();
     QString nearbyLocation() const;
     void showProject();
