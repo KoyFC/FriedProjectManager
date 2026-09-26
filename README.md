@@ -27,8 +27,10 @@ Then run it:
 
 ## Status
 
-- **New Project** writes a project directory holding `project.fried`, `build.hxml`, `CMakeLists.txt`, `src/Main.hx` and an example asset, then opens it.
+- **New Project** writes a project directory holding `project.fried`, `build.hxml`, `CMakeLists.txt`, `src/Main.hx`, an example asset and a `.gitignore`, makes it a Git repository with the engine as a submodule, and opens it. Everything is staged, so the first commit is yours.
 - **Open Project** reads an existing `project.fried`, and **Save** writes the edited fields back, keeping any keys the tool does not know about.
 - The platform selector hides the fields the chosen platform does not use.
 
-A generated project compiles and runs once the engine is present at `engine/`, which the tool does not put there yet: the Git repository and the engine submodule are the next step, followed by the Vita `sce_sys/` and `.vscode/` files, building from the tool, and the icon action.
+A generated project compiles and runs as it comes out: `haxe build.hxml`, then `cmake -S . -B build && cmake --build build`. Cloning the submodule needs access to the engine repository, which is private, so whoever generates a project needs credentials for it until that changes.
+
+Still to come: the Vita `sce_sys/` and `.vscode/` files, building from inside the tool, and the icon action.

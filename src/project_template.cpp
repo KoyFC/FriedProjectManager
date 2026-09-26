@@ -11,6 +11,8 @@ namespace
 {
     const QString s_templateRoot = QStringLiteral(":/templates/project");
     const QString s_defaultVersion = QStringLiteral("01.00");
+    const QString s_engineUrl = QStringLiteral("https://github.com/KoyFC/FriedEngine.git");
+    const QString s_engineDirectory = QStringLiteral("engine");
 
     const QStringList s_substituted = {
         QStringLiteral("CMakeLists.txt"),
@@ -113,7 +115,7 @@ bool ProjectTemplate::write(const QString &directory, const QString &name, const
         {QStringLiteral("TARGET"), targetName(name)},
     };
 
-    QDirIterator templateFiles(s_templateRoot, QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator templateFiles(s_templateRoot, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
     while (templateFiles.hasNext())
     {
         const QString relativePath = templateFiles.next().mid(s_templateRoot.size() + 1);
@@ -124,4 +126,13 @@ bool ProjectTemplate::write(const QString &directory, const QString &name, const
     }
 
     return true;
+}
+
+QList<QStringList> ProjectTemplate::repositoryCommands()
+{
+    return {
+        {QStringLiteral("git"), QStringLiteral("init"), QStringLiteral("-b"), QStringLiteral("main")},
+        {QStringLiteral("git"), QStringLiteral("submodule"), QStringLiteral("add"), s_engineUrl, s_engineDirectory},
+        {QStringLiteral("git"), QStringLiteral("add"), QStringLiteral("-A")},
+    };
 }

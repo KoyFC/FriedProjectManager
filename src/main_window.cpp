@@ -1,5 +1,6 @@
 #include "main_window.h"
 
+#include "command_dialog.h"
 #include "new_project_dialog.h"
 #include "project_template.h"
 
@@ -121,6 +122,16 @@ void MainWindow::newProject()
     }
 
     openProject(dialog.directory());
+
+    CommandDialog repository(this, QStringLiteral("Git Repository"), dialog.directory(), ProjectTemplate::repositoryCommands());
+    repository.exec();
+    if (!repository.succeeded())
+    {
+        QMessageBox::warning(this, QStringLiteral("New Project"),
+                             QStringLiteral("The project files are written, but its Git repository is unfinished. "
+                                            "Fix whatever the output reported and run the commands again in %1.")
+                                 .arg(QDir::toNativeSeparators(dialog.directory())));
+    }
 }
 
 void MainWindow::chooseProject()

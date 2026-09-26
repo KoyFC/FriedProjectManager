@@ -14,6 +14,8 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()
 
 qt_add_executable(fried_project_manager
+    src/command_dialog.h
+    src/command_dialog.cpp
     src/main.cpp
     src/main_window.h
     src/main_window.cpp
@@ -28,6 +30,7 @@ qt_add_executable(fried_project_manager
 qt_add_resources(fried_project_manager "templates"
     PREFIX "/"
     FILES
+        templates/project/.gitignore
         templates/project/CMakeLists.txt
         templates/project/assets/white.png
         templates/project/build.hxml

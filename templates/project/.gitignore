@@ -1,0 +1,4 @@
+# hxcpp output and CMake build trees
+build/
+*.ndll
+haxe_*.log
