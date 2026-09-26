@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version being built, e.g. 0.1.0"
+        required: true
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest runner still offered, so the binary keeps working on older distributions.
+          - platform: linux
+            runner: ubuntu-22.04
+            executable: build/fried_project_manager
+          - platform: windows
+            runner: windows-2022
+            executable: build/Release/fried_project_manager.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libgl1-mesa-dev libxkbcommon-dev
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.8.3
+          cache: true
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fried-project-manager-${{ inputs.version }}-${{ matrix.platform }}
+          path: ${{ matrix.executable }}
+          if-no-files-found: error
