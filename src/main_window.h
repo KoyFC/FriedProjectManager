@@ -15,8 +15,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow();
 
-    // Reports the failure and keeps the current project.
+    // Both show their own error and leave the open project as it was.
     bool openProject(const QString &directory);
+    bool saveProject();
 
 private:
     void buildForm();
@@ -26,6 +27,7 @@ private:
     void chooseProject();
     void showProject();
     void showPlatformFields();
+    QString firstProblem(QLineEdit **field) const;
 
     Project m_project;
 

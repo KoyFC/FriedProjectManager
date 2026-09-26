@@ -17,7 +17,6 @@ namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
 
-    // The two the engine's CMake actually branches on.
     enum Platform
     {
         PlatformPc,
@@ -32,6 +31,7 @@ MainWindow::MainWindow()
 
     QMenu *fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
     fileMenu->addAction(QStringLiteral("&Open Project..."), QKeySequence::Open, this, &MainWindow::chooseProject);
+    fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
 
     buildForm();
     statusBar()->showMessage(QStringLiteral("No project open"));
@@ -81,7 +81,6 @@ QWidget *MainWindow::buildPlatformRow()
 QLineEdit *MainWindow::addField(const QString &label)
 {
     QLineEdit *field = new QLineEdit(m_form);
-    field->setReadOnly(true);
     m_fields->addRow(label, field);
     return field;
 }
@@ -133,4 +132,58 @@ void MainWindow::showProject()
     m_form->setEnabled(true);
     setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
     statusBar()->showMessage(QDir::toNativeSeparators(m_project.filePath()));
+}
+
+QString MainWindow::firstProblem(QLineEdit **field) const
+{
+    const QVector<QPair<QLineEdit *, QString>> problems = {
+        {m_name, Project::checkIdentity(m_name->text())},
+        {m_organization, Project::checkIdentity(m_organization->text())},
+        {m_version, Project::checkVersion(m_version->text())},
+        {m_vitaTitleId, Project::checkVitaTitleId(m_vitaTitleId->text())},
+    };
+
+    for (const auto &[edit, problem] : problems)
+    {
+        if (problem.isEmpty())
+        {
+            continue;
+        }
+
+        *field = edit;
+        const QLabel *label = qobject_cast<QLabel *>(m_fields->labelForField(edit));
+        return QStringLiteral("%1 %2").arg(label->text(), problem);
+    }
+
+    return QString();
+}
+
+bool MainWindow::saveProject()
+{
+    QLineEdit *invalid = nullptr;
+    const QString problem = firstProblem(&invalid);
+    if (!problem.isEmpty())
+    {
+        QMessageBox::warning(this, QStringLiteral("Save"), problem);
+        invalid->setFocus();
+        invalid->selectAll();
+        return false;
+    }
+
+    m_project.setName(m_name->text());
+    m_project.setOrganization(m_organization->text());
+    m_project.setVersion(m_version->text());
+    m_project.setWindowTitle(m_windowTitle->text());
+    m_project.setVitaTitleId(m_vitaTitleId->text());
+
+    QString error;
+    if (!m_project.save(&error))
+    {
+        QMessageBox::warning(this, QStringLiteral("Save"), error);
+        return false;
+    }
+
+    setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
+    statusBar()->showMessage(QStringLiteral("Saved %1").arg(QDir::toNativeSeparators(m_project.filePath())));
+    return true;
 }
