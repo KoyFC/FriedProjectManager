@@ -5,12 +5,25 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QVBoxLayout>
+
+namespace
+{
+    // The name is kept as it was typed; the directory it goes in drops the spaces.
+    QString directoryName(const QString &name)
+    {
+        static const QRegularExpression whitespace(QStringLiteral("\\s+"));
+        QString folder = name.trimmed();
+        return folder.replace(whitespace, QStringLiteral("-"));
+    }
+}
 
 NewProjectDialog::NewProjectDialog(QWidget *parent, const QString &location)
     : QDialog(parent)
@@ -56,7 +69,7 @@ NewProjectDialog::NewProjectDialog(QWidget *parent, const QString &location)
 
 QString NewProjectDialog::directory() const
 {
-    return QDir::cleanPath(QDir(m_location->text()).filePath(m_name->text()));
+    return QDir::cleanPath(QDir(m_location->text()).filePath(directoryName(m_name->text())));
 }
 
 QString NewProjectDialog::name() const
@@ -99,6 +112,11 @@ QString NewProjectDialog::problem() const
         return QStringLiteral("Organization %1").arg(organizationProblem);
     }
 
+    if (directoryName(m_name->text()).isEmpty())
+    {
+        return QStringLiteral("Name must hold something other than spaces.");
+    }
+
     const QDir target(directory());
     if (target.exists() && !target.isEmpty())
     {
@@ -112,7 +130,29 @@ void NewProjectDialog::refresh()
 {
     const QString found = problem();
     m_create->setEnabled(found.isEmpty());
-    m_message->setText(found.isEmpty()
-                           ? QStringLiteral("Creates %1").arg(QDir::toNativeSeparators(directory()))
-                           : found);
+
+    if (!found.isEmpty())
+    {
+        m_message->setText(found);
+        return;
+    }
+
+    QString message = QStringLiteral("Creates %1").arg(QDir::toNativeSeparators(directory()));
+
+    const QString folder = directoryName(m_name->text());
+    if (folder != m_name->text())
+    {
+        // VitaSDK's packaging step does not quote the paths it is given.
+        message += QStringLiteral("\n\nThe project keeps the name \"%1\", but its directory is \"%2\": a space in the "
+                                  "path stops a Vita build from being packaged.")
+                       .arg(m_name->text(), folder);
+    }
+
+    if (QFileInfo(directory()).path().contains(QChar(' ')))
+    {
+        message += QStringLiteral("\n\nThe location itself contains a space, so a Vita build will compile but fail to "
+                                  "package. A PC build is unaffected.");
+    }
+
+    m_message->setText(message);
 }

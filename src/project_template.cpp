@@ -15,6 +15,10 @@ namespace
     const QString s_engineDirectory = QStringLiteral("engine");
 
     const QStringList s_substituted = {
+        QStringLiteral(".vscode/c_cpp_properties.json"),
+        QStringLiteral(".vscode/launch.json"),
+        QStringLiteral(".vscode/settings.json"),
+        QStringLiteral(".vscode/tasks.json"),
         QStringLiteral("CMakeLists.txt"),
         QStringLiteral("project.fried"),
     };
@@ -84,6 +88,16 @@ namespace
         {
             *error = QStringLiteral("Could not write %1: %2")
                          .arg(QDir::toNativeSeparators(destination), output.errorString());
+            return false;
+        }
+
+        output.close();
+
+        // A resource carries no file mode, and the editor tasks have to be able to run these.
+        const QFileDevice::Permissions executable = QFileDevice::ExeOwner | QFileDevice::ExeGroup | QFileDevice::ExeOther;
+        if (relativePath.endsWith(QStringLiteral(".sh")) && !output.setPermissions(output.permissions() | executable))
+        {
+            *error = QStringLiteral("Could not make %1 executable.").arg(QDir::toNativeSeparators(destination));
             return false;
         }
 

@@ -31,10 +31,22 @@ qt_add_resources(fried_project_manager "templates"
     PREFIX "/"
     FILES
         templates/project/.gitignore
+        templates/project/.vscode/c_cpp_properties.json
+        templates/project/.vscode/extensions.json
+        templates/project/.vscode/host-cmake.sh
+        templates/project/.vscode/host-haxe.sh
+        templates/project/.vscode/host-run.sh
+        templates/project/.vscode/launch.json
+        templates/project/.vscode/settings.json
+        templates/project/.vscode/tasks.json
         templates/project/CMakeLists.txt
         templates/project/assets/white.png
         templates/project/build.hxml
         templates/project/project.fried
+        templates/project/sce_sys/icon0.png
+        templates/project/sce_sys/livearea/contents/bg.png
+        templates/project/sce_sys/livearea/contents/startup.png
+        templates/project/sce_sys/livearea/contents/template.xml
         templates/project/src/Main.hx
 )
 

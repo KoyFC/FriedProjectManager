@@ -1,0 +1,56 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Haxe: generate C++",
+            "detail": "haxe build.hxml -> build/cpp",
+            "type": "process",
+            "command": "${workspaceFolder}/.vscode/host-run.sh",
+            "args": ["haxe", "build.hxml"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "windows": { "command": "haxe", "args": ["build.hxml"] },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: configure",
+            "type": "process",
+            "command": "${workspaceFolder}/.vscode/host-run.sh",
+            "args": ["cmake", "-S", ".", "-B", "build"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "windows": { "command": "cmake", "args": ["-S", ".", "-B", "build"] },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: build",
+            "type": "process",
+            "command": "${workspaceFolder}/.vscode/host-run.sh",
+            "args": ["cmake", "--build", "build"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "windows": { "command": "cmake", "args": ["--build", "build"] },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build @NAME@",
+            "detail": "Full pipeline: Haxe -> hxcpp -> CMake configure -> CMake build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Haxe: generate C++",
+                "CMake: configure",
+                "CMake: build"
+            ],
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run @NAME@",
+            "detail": "Build, then run build/@TARGET@",
+            "type": "process",
+            "command": "${workspaceFolder}/.vscode/host-run.sh",
+            "args": ["./build/@TARGET@"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "windows": { "command": "build\\@TARGET@.exe", "args": [] },
+            "dependsOn": "Build @NAME@",
+            "problemMatcher": []
+        }
+    ]
+}

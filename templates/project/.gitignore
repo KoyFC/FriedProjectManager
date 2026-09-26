@@ -2,3 +2,14 @@
 build/
 *.ndll
 haxe_*.log
+
+# Editor state, but not the shared configuration
+.vscode/*
+!.vscode/c_cpp_properties.json
+!.vscode/extensions.json
+!.vscode/host-cmake.sh
+!.vscode/host-haxe.sh
+!.vscode/host-run.sh
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
