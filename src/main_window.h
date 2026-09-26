@@ -4,6 +4,7 @@
 
 #include <QMainWindow>
 
+class QComboBox;
 class QFormLayout;
 class QLineEdit;
 
@@ -19,14 +20,18 @@ public:
 
 private:
     void buildForm();
-    QLineEdit *addField(QFormLayout *layout, const QString &label);
+    QWidget *buildPlatformRow();
+    QLineEdit *addField(const QString &label);
 
     void chooseProject();
     void showProject();
+    void showPlatformFields();
 
     Project m_project;
 
     QWidget *m_form = nullptr;
+    QFormLayout *m_fields = nullptr;
+    QComboBox *m_platform = nullptr;
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;
     QLineEdit *m_version = nullptr;

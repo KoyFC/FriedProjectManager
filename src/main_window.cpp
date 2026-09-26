@@ -1,9 +1,12 @@
 #include "main_window.h"
 
+#include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QHBoxLayout>
 #include <QKeySequence>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -13,6 +16,13 @@
 namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
+
+    // The two the engine's CMake actually branches on.
+    enum Platform
+    {
+        PlatformPc,
+        PlatformVita
+    };
 }
 
 MainWindow::MainWindow()
@@ -32,26 +42,54 @@ void MainWindow::buildForm()
     m_form = new QWidget(this);
 
     QVBoxLayout *column = new QVBoxLayout(m_form);
-    QFormLayout *fields = new QFormLayout();
-    column->addLayout(fields);
+    column->addWidget(buildPlatformRow());
+
+    m_fields = new QFormLayout();
+    column->addLayout(m_fields);
     column->addStretch();
 
-    m_name = addField(fields, QStringLiteral("Name"));
-    m_organization = addField(fields, QStringLiteral("Organization"));
-    m_version = addField(fields, QStringLiteral("Version"));
-    m_windowTitle = addField(fields, QStringLiteral("Window title"));
-    m_vitaTitleId = addField(fields, QStringLiteral("Vita title ID"));
+    m_name = addField(QStringLiteral("Name"));
+    m_organization = addField(QStringLiteral("Organization"));
+    m_version = addField(QStringLiteral("Version"));
+    m_windowTitle = addField(QStringLiteral("Window title"));
+    m_vitaTitleId = addField(QStringLiteral("Vita title ID"));
+
+    showPlatformFields();
 
     m_form->setEnabled(false);
     setCentralWidget(m_form);
 }
 
-QLineEdit *MainWindow::addField(QFormLayout *layout, const QString &label)
+QWidget *MainWindow::buildPlatformRow()
+{
+    QWidget *row = new QWidget(m_form);
+    QHBoxLayout *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    m_platform = new QComboBox(row);
+    m_platform->insertItem(PlatformPc, QStringLiteral("PC"));
+    m_platform->insertItem(PlatformVita, QStringLiteral("PlayStation Vita"));
+
+    layout->addWidget(new QLabel(QStringLiteral("Platform"), row));
+    layout->addWidget(m_platform);
+    layout->addStretch();
+
+    connect(m_platform, &QComboBox::currentIndexChanged, this, &MainWindow::showPlatformFields);
+    return row;
+}
+
+QLineEdit *MainWindow::addField(const QString &label)
 {
     QLineEdit *field = new QLineEdit(m_form);
     field->setReadOnly(true);
-    layout->addRow(label, field);
+    m_fields->addRow(label, field);
     return field;
+}
+
+void MainWindow::showPlatformFields()
+{
+    const bool vita = m_platform->currentIndex() == PlatformVita;
+    m_fields->setRowVisible(m_vitaTitleId, vita);
 }
 
 void MainWindow::chooseProject()
