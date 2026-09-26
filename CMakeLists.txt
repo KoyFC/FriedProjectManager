@@ -14,6 +14,8 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()
 
 qt_add_executable(fried_project_manager
+    src/build.h
+    src/build.cpp
     src/command_dialog.h
     src/command_dialog.cpp
     src/main.cpp

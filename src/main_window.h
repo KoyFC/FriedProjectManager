@@ -4,6 +4,7 @@
 
 #include <QMainWindow>
 
+class QAction;
 class QComboBox;
 class QFormLayout;
 class QLineEdit;
@@ -26,6 +27,9 @@ private:
 
     void newProject();
     bool confirmGitNotice();
+    void buildProject();
+    bool confirmUnsavedEdits();
+    bool hasUnsavedEdits() const;
     void chooseProject();
     QString nearbyLocation() const;
     void showProject();
@@ -37,6 +41,7 @@ private:
     QWidget *m_form = nullptr;
     QFormLayout *m_fields = nullptr;
     QComboBox *m_platform = nullptr;
+    QAction *m_build = nullptr;
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;
     QLineEdit *m_version = nullptr;

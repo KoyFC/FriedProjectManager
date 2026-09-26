@@ -1,5 +1,6 @@
 #include "main_window.h"
 
+#include "build.h"
 #include "command_dialog.h"
 #include "new_project_dialog.h"
 #include "project_template.h"
@@ -15,20 +16,16 @@
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSettings>
 #include <QStatusBar>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
-
-    enum Platform
-    {
-        PlatformPc,
-        PlatformVita
-    };
 }
 
 MainWindow::MainWindow()
@@ -40,6 +37,12 @@ MainWindow::MainWindow()
     fileMenu->addAction(QStringLiteral("&New Project..."), QKeySequence::New, this, &MainWindow::newProject);
     fileMenu->addAction(QStringLiteral("&Open Project..."), QKeySequence::Open, this, &MainWindow::chooseProject);
     fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
+
+    m_build = new QAction(QStringLiteral("&Build"), this);
+    m_build->setShortcut(QKeySequence(QStringLiteral("Ctrl+B")));
+    m_build->setEnabled(false);
+    connect(m_build, &QAction::triggered, this, &MainWindow::buildProject);
+    menuBar()->addMenu(QStringLiteral("&Build"))->addAction(m_build);
 
     buildForm();
     statusBar()->showMessage(QStringLiteral("No project open"));
@@ -78,8 +81,12 @@ QWidget *MainWindow::buildPlatformRow()
     m_platform->insertItem(PlatformPc, QStringLiteral("PC"));
     m_platform->insertItem(PlatformVita, QStringLiteral("PlayStation Vita"));
 
+    QToolButton *build = new QToolButton(row);
+    build->setDefaultAction(m_build);
+
     layout->addWidget(new QLabel(QStringLiteral("Platform"), row));
     layout->addWidget(m_platform);
+    layout->addWidget(build);
     layout->addStretch();
 
     connect(m_platform, &QComboBox::currentIndexChanged, this, &MainWindow::showPlatformFields);
@@ -206,8 +213,64 @@ void MainWindow::showProject()
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
     m_form->setEnabled(true);
+    m_build->setEnabled(true);
     setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
     statusBar()->showMessage(QDir::toNativeSeparators(m_project.filePath()));
+}
+
+bool MainWindow::hasUnsavedEdits() const
+{
+    return m_name->text() != m_project.name()
+           || m_organization->text() != m_project.organization()
+           || m_version->text() != m_project.version()
+           || m_windowTitle->text() != m_project.windowTitle()
+           || m_vitaTitleId->text() != m_project.vitaTitleId();
+}
+
+// The build reads project.fried, not the form.
+bool MainWindow::confirmUnsavedEdits()
+{
+    if (!hasUnsavedEdits())
+    {
+        return true;
+    }
+
+    QMessageBox ask(QMessageBox::Question, QStringLiteral("Build"),
+                    QStringLiteral("The form holds edits that project.fried does not."), QMessageBox::Cancel, this);
+    QPushButton *save = ask.addButton(QStringLiteral("Save and Build"), QMessageBox::AcceptRole);
+    QPushButton *anyway = ask.addButton(QStringLiteral("Build Anyway"), QMessageBox::DestructiveRole);
+    ask.setDefaultButton(save);
+    ask.exec();
+
+    if (ask.clickedButton() == save)
+    {
+        return saveProject();
+    }
+
+    return ask.clickedButton() == anyway;
+}
+
+void MainWindow::buildProject()
+{
+    if (!confirmUnsavedEdits())
+    {
+        return;
+    }
+
+    QString error;
+    const QList<QStringList> commands = Build::commands(m_platform->currentIndex(), &error);
+    if (commands.isEmpty())
+    {
+        QMessageBox::warning(this, QStringLiteral("Build"), error);
+        return;
+    }
+
+    CommandDialog build(this, QStringLiteral("Build %1").arg(m_platform->currentText()), m_project.directory(), commands);
+    build.exec();
+
+    statusBar()->showMessage(build.succeeded()
+                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), m_platform->currentText())
+                                 : QStringLiteral("Build for %1 did not finish").arg(m_platform->currentText()));
 }
 
 QString MainWindow::firstProblem(QLineEdit **field) const
