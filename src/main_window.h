@@ -7,6 +7,7 @@
 class QAction;
 class QComboBox;
 class QFormLayout;
+class QLabel;
 class QLineEdit;
 class QWidget;
 
@@ -24,6 +25,7 @@ public:
 private:
     void buildForm();
     QWidget *buildPlatformRow();
+    QWidget *buildIconRow();
     QWidget *buildDirectoryRow();
     QLineEdit *addField(const QString &label);
 
@@ -31,6 +33,7 @@ private:
     bool confirmGitNotice();
     void buildProject();
     void chooseIcon();
+    void showIcon();
     void chooseBuildDirectory();
     void showBuildDirectory();
     void rememberBuildDirectory();
@@ -49,6 +52,7 @@ private:
     QComboBox *m_platform = nullptr;
     QAction *m_build = nullptr;
     QAction *m_icon = nullptr;
+    QLabel *m_iconPreview = nullptr;
     QLineEdit *m_buildDirectory = nullptr;
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;

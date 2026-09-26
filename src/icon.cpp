@@ -2,10 +2,10 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <QImage>
 #include <QImageReader>
 #include <QImageWriter>
 #include <QSaveFile>
+#include <QSet>
 
 namespace
 {
@@ -18,11 +18,38 @@ namespace
     // No desktop draws a window icon larger than this.
     constexpr int s_pcLimit = 512;
 
+    // The most colours a palette PNG can hold.
+    constexpr int s_paletteLimit = 256;
+
     // An icon is square wherever it is shown, so an oblong source keeps its middle.
-    QImage squared(const QImage &image)
+    QImage squared(const QImage &image, QStringList *notes)
     {
+        if (image.width() == image.height())
+        {
+            return image;
+        }
+
         const int side = qMin(image.width(), image.height());
+        *notes << QStringLiteral("Uses the centre %1x%1 square of %2x%3.").arg(side).arg(image.width()).arg(image.height());
         return image.copy((image.width() - side) / 2, (image.height() - side) / 2, side, side);
+    }
+
+    int distinctColours(const QImage &image)
+    {
+        const QImage rgb = image.convertToFormat(QImage::Format_ARGB32);
+        QSet<QRgb> seen;
+        for (int y = 0; y < rgb.height(); ++y)
+        {
+            for (int x = 0; x < rgb.width(); ++x)
+            {
+                seen.insert(rgb.pixel(x, y));
+                if (seen.size() > s_paletteLimit)
+                {
+                    return seen.size();
+                }
+            }
+        }
+        return seen.size();
     }
 
     bool stage(QSaveFile &file, const QImage &image, QString *error)
@@ -81,7 +108,7 @@ QStringList Icon::readablePatterns()
     return patterns;
 }
 
-bool Icon::write(const QString &projectDirectory, const QString &sourceImage, QString *report, QString *error)
+QImage Icon::read(const QString &sourceImage, QString *error)
 {
     QImageReader reader(sourceImage);
 
@@ -93,61 +120,97 @@ bool Icon::write(const QString &projectDirectory, const QString &sourceImage, QS
     {
         *error = QStringLiteral("%1 could not be read as an image: %2")
                      .arg(QFileInfo(sourceImage).fileName(), reader.errorString());
-        return false;
     }
+    return source;
+}
 
-    QStringList notes;
-
-    const QImage square = squared(source);
-    if (square.size() != source.size())
+QImage Icon::forPc(const QImage &source, QStringList *notes)
+{
+    if (source.isNull())
     {
-        notes << QStringLiteral("The source is %1x%2, so its centre %3x%3 square was used.")
-                     .arg(source.width())
-                     .arg(source.height())
-                     .arg(square.width());
+        return source;
     }
 
-    QImage pc = square;
+    QImage pc = squared(source, notes);
     if (pc.width() > s_pcLimit)
     {
+        *notes << QStringLiteral("Reduced from %1x%1 to %2x%2.").arg(pc.width()).arg(s_pcLimit);
         pc = pc.scaled(s_pcLimit, s_pcLimit, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        notes << QStringLiteral("The window icon was reduced to %1x%1.").arg(s_pcLimit);
     }
-    pc = pc.convertToFormat(pc.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+    return pc.convertToFormat(pc.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+}
 
-    // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.
-    const QImage vita = square.scaled(s_vitaSize, s_vitaSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                            .convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
+QImage Icon::forVita(const QImage &source, QStringList *notes)
+{
+    if (source.isNull())
+    {
+        return source;
+    }
+
+    const QImage square = squared(source, notes);
     if (square.width() < s_vitaSize)
     {
-        notes << QStringLiteral("The source is only %1x%1, so the Vita icon was enlarged to %2x%2 and will look soft.")
-                     .arg(square.width())
-                     .arg(s_vitaSize);
+        *notes << QStringLiteral("Enlarged from %1x%1, so it will look soft.").arg(square.width());
+    }
+    else if (square.width() > s_vitaSize)
+    {
+        *notes << QStringLiteral("Reduced from %1x%1.").arg(square.width());
     }
 
+    const QImage resized = square.scaled(s_vitaSize, s_vitaSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (distinctColours(resized) > s_paletteLimit)
+    {
+        *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteLimit);
+    }
+
+    // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.
+    return resized.convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
+}
+
+bool Icon::write(const QString &projectDirectory, const QImage &pc, const QImage &vita, QString *error)
+{
     const QDir directory(projectDirectory);
     QSaveFile pcFile(directory.filePath(s_pcPath));
     QSaveFile vitaFile(directory.filePath(s_vitaPath));
 
     // Both are staged before either is committed, so a failure replaces neither.
-    if (!stage(pcFile, pc, error) || !stage(vitaFile, vita, error))
+    if (!pc.isNull() && !stage(pcFile, pc, error))
     {
         return false;
     }
-    if (!commit(pcFile, error) || !commit(vitaFile, error))
+    if (!vita.isNull() && !stage(vitaFile, vita, error))
     {
         return false;
     }
 
-    *report = QStringLiteral("%1 is now %2x%2 truecolor, and %3 a %4x%4 palette PNG of %5 colours.")
-                  .arg(s_pcPath)
-                  .arg(pc.width())
-                  .arg(s_vitaPath)
-                  .arg(s_vitaSize)
-                  .arg(vita.colorCount());
-    if (!notes.isEmpty())
+    if (!pc.isNull() && !commit(pcFile, error))
     {
-        *report += QStringLiteral("\n\n") + notes.join(QChar('\n'));
+        return false;
     }
-    return true;
+    return vita.isNull() || commit(vitaFile, error);
+}
+
+QString Icon::describe(const QImage &pc, const QImage &vita)
+{
+    QStringList written;
+    if (!pc.isNull())
+    {
+        written << QStringLiteral("%1 %2x%2 truecolor").arg(s_pcPath).arg(pc.width());
+    }
+    if (!vita.isNull())
+    {
+        written << QStringLiteral("%1 a %2x%2 palette PNG of %3 colours")
+                       .arg(s_vitaPath)
+                       .arg(vita.width())
+                       .arg(vita.colorCount());
+    }
+
+    if (written.isEmpty())
+    {
+        return QStringLiteral("Nothing was written.");
+    }
+
+    // Only the first clause carries the verb, so a single file still reads as a sentence.
+    written.first().insert(written.first().indexOf(QChar(' ')), QStringLiteral(" is now"));
+    return written.join(QStringLiteral(", and ")) + QChar('.');
 }

@@ -3,6 +3,7 @@
 #include "build.h"
 #include "command_dialog.h"
 #include "icon.h"
+#include "icon_dialog.h"
 #include "new_project_dialog.h"
 #include "project_template.h"
 
@@ -13,12 +14,13 @@
 #include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
-#include <QImageReader>
 #include <QKeySequence>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPixmap>
 #include <QPushButton>
 #include <QSettings>
 #include <QStatusBar>
@@ -30,6 +32,9 @@ namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
+
+    // Large enough to tell two icons apart on a form row.
+    constexpr int s_iconPreviewSize = 32;
 
     // A project path holds separators, so it is percent encoded to stay one key.
     QString buildDirectoryKey(const QString &project, int platform)
@@ -77,6 +82,7 @@ void MainWindow::buildForm()
     column->addStretch();
 
     m_fields->addRow(QStringLiteral("Platform"), buildPlatformRow());
+    m_fields->addRow(QStringLiteral("Icon"), buildIconRow());
     m_fields->addRow(QStringLiteral("Build directory"), buildDirectoryRow());
 
     // Everything below the line is what project.fried holds.
@@ -118,6 +124,28 @@ QWidget *MainWindow::buildPlatformRow()
     return row;
 }
 
+QWidget *MainWindow::buildIconRow()
+{
+    QWidget *row = new QWidget(m_form);
+    QHBoxLayout *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    m_iconPreview = new QLabel(row);
+    m_iconPreview->setFixedSize(s_iconPreviewSize, s_iconPreviewSize);
+    m_iconPreview->setAlignment(Qt::AlignCenter);
+    m_iconPreview->setFrameShape(QFrame::StyledPanel);
+    m_iconPreview->setToolTip(Icon::pcPath());
+
+    QPushButton *change = new QPushButton(QStringLiteral("Change..."), row);
+
+    layout->addWidget(m_iconPreview);
+    layout->addWidget(change);
+    layout->addStretch();
+
+    connect(change, &QPushButton::clicked, this, &MainWindow::chooseIcon);
+    return row;
+}
+
 QWidget *MainWindow::buildDirectoryRow()
 {
     QWidget *row = new QWidget(m_form);
@@ -137,23 +165,19 @@ QWidget *MainWindow::buildDirectoryRow()
 
 void MainWindow::chooseIcon()
 {
-    const QString source =
-        QFileDialog::getOpenFileName(this, QStringLiteral("Choose an icon image"), m_project.directory(),
-                                     QStringLiteral("Images (%1)").arg(Icon::readablePatterns().join(QChar(' '))));
-    if (source.isEmpty())
+    IconDialog dialog(this, m_project.directory());
+    if (dialog.exec() == QDialog::Accepted)
     {
-        return;
+        showIcon();
+        QMessageBox::information(this, s_applicationTitle, dialog.report());
     }
+}
 
-    QString report;
-    QString error;
-    if (!Icon::write(m_project.directory(), source, &report, &error))
-    {
-        QMessageBox::warning(this, s_applicationTitle, error);
-        return;
-    }
-
-    QMessageBox::information(this, s_applicationTitle, report);
+void MainWindow::showIcon()
+{
+    const QImage icon(QDir(m_project.directory()).filePath(Icon::pcPath()));
+    m_iconPreview->setPixmap(QPixmap::fromImage(icon).scaled(s_iconPreviewSize, s_iconPreviewSize, Qt::KeepAspectRatio,
+                                                             Qt::SmoothTransformation));
 }
 
 void MainWindow::chooseBuildDirectory()
@@ -204,7 +228,8 @@ void MainWindow::showPlatformFields()
 
     if (!m_project.directory().isEmpty())
     {
-        showBuildDirectory();
+        showIcon();
+    showBuildDirectory();
     }
 }
 
@@ -314,6 +339,7 @@ void MainWindow::showProject()
     m_windowTitle->setText(m_project.windowTitle());
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
+    showIcon();
     showBuildDirectory();
 
     m_form->setEnabled(true);
