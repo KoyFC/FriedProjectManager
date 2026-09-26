@@ -396,3 +396,7 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+## Fried Project Manager (Qt / CMake)
+# CMake build trees
+build/
