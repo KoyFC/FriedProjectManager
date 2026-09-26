@@ -22,6 +22,8 @@ qt_add_executable(fried_project_manager
     src/icon.cpp
     src/icon_dialog.h
     src/icon_dialog.cpp
+    src/home_page.h
+    src/home_page.cpp
     src/main.cpp
     src/main_window.h
     src/main_window.cpp
@@ -31,6 +33,8 @@ qt_add_executable(fried_project_manager
     src/project.cpp
     src/project_template.h
     src/project_template.cpp
+    src/recent_projects.h
+    src/recent_projects.cpp
 )
 
 qt_add_resources(fried_project_manager "templates"

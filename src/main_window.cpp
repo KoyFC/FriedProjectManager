@@ -2,10 +2,12 @@
 
 #include "build.h"
 #include "command_dialog.h"
+#include "home_page.h"
 #include "icon.h"
 #include "icon_dialog.h"
 #include "new_project_dialog.h"
 #include "project_template.h"
+#include "recent_projects.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -23,6 +25,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QSettings>
+#include <QStackedWidget>
 #include <QStatusBar>
 #include <QToolButton>
 #include <QUrl>
@@ -54,6 +57,12 @@ MainWindow::MainWindow()
     fileMenu->addAction(QStringLiteral("&New Project..."), QKeySequence::New, this, &MainWindow::newProject);
     fileMenu->addAction(QStringLiteral("&Open Project..."), QKeySequence::Open, this, &MainWindow::chooseProject);
     fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
+
+    m_close = new QAction(QStringLiteral("&Close Project"), this);
+    m_close->setShortcut(QKeySequence::Close);
+    m_close->setEnabled(false);
+    connect(m_close, &QAction::triggered, this, &MainWindow::showHome);
+    fileMenu->addAction(m_close);
     fileMenu->addSeparator();
 
     m_icon = new QAction(QStringLiteral("Set &Icon..."), this);
@@ -67,8 +76,23 @@ MainWindow::MainWindow()
     connect(m_build, &QAction::triggered, this, &MainWindow::buildProject);
     menuBar()->addMenu(QStringLiteral("&Build"))->addAction(m_build);
 
+    buildPages();
+    showHome();
+}
+
+void MainWindow::buildPages()
+{
+    m_home = new HomePage(this);
+    connect(m_home, &HomePage::projectChosen, this, &MainWindow::openProject);
+    connect(m_home, &HomePage::newProjectRequested, this, &MainWindow::newProject);
+    connect(m_home, &HomePage::openProjectRequested, this, &MainWindow::chooseProject);
+
     buildForm();
-    statusBar()->showMessage(QStringLiteral("No project open"));
+
+    m_pages = new QStackedWidget(this);
+    m_pages->addWidget(m_home);
+    m_pages->addWidget(m_form);
+    setCentralWidget(m_pages);
 }
 
 void MainWindow::buildForm()
@@ -99,8 +123,6 @@ void MainWindow::buildForm()
 
     showPlatformFields();
 
-    m_form->setEnabled(false);
-    setCentralWidget(m_form);
 }
 
 QWidget *MainWindow::buildPlatformRow()
@@ -161,6 +183,46 @@ QWidget *MainWindow::buildDirectoryRow()
     connect(browse, &QPushButton::clicked, this, &MainWindow::chooseBuildDirectory);
     connect(m_buildDirectory, &QLineEdit::editingFinished, this, &MainWindow::rememberBuildDirectory);
     return row;
+}
+
+void MainWindow::showHome()
+{
+    if (m_pages->currentWidget() == m_form && !confirmLeavingProject())
+    {
+        return;
+    }
+
+    m_project = Project();
+    m_build->setEnabled(false);
+    m_icon->setEnabled(false);
+    m_close->setEnabled(false);
+
+    m_home->refresh();
+    m_pages->setCurrentWidget(m_home);
+    setWindowTitle(s_applicationTitle);
+    statusBar()->showMessage(QStringLiteral("No project open"));
+}
+
+bool MainWindow::confirmLeavingProject()
+{
+    if (!hasUnsavedEdits())
+    {
+        return true;
+    }
+
+    QMessageBox ask(QMessageBox::Question, QStringLiteral("Close Project"),
+                    QStringLiteral("The form holds edits that project.fried does not."), QMessageBox::Cancel, this);
+    QPushButton *save = ask.addButton(QStringLiteral("Save and Close"), QMessageBox::AcceptRole);
+    QPushButton *discard = ask.addButton(QStringLiteral("Discard"), QMessageBox::DestructiveRole);
+    ask.setDefaultButton(save);
+    ask.exec();
+
+    if (ask.clickedButton() == save)
+    {
+        return saveProject();
+    }
+
+    return ask.clickedButton() == discard;
 }
 
 void MainWindow::chooseIcon()
@@ -327,6 +389,7 @@ bool MainWindow::openProject(const QString &directory)
     }
 
     m_project = project;
+    RecentProjects::remember(directory);
     showProject();
     return true;
 }
@@ -342,9 +405,10 @@ void MainWindow::showProject()
     showIcon();
     showBuildDirectory();
 
-    m_form->setEnabled(true);
+    m_pages->setCurrentWidget(m_form);
     m_build->setEnabled(true);
     m_icon->setEnabled(true);
+    m_close->setEnabled(true);
     setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
     statusBar()->showMessage(QDir::toNativeSeparators(m_project.filePath()));
 }

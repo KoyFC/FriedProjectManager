@@ -4,11 +4,14 @@
 
 #include <QMainWindow>
 
+class HomePage;
+
 class QAction;
 class QComboBox;
 class QFormLayout;
 class QLabel;
 class QLineEdit;
+class QStackedWidget;
 class QWidget;
 
 class MainWindow : public QMainWindow
@@ -23,6 +26,7 @@ public:
     bool saveProject();
 
 private:
+    void buildPages();
     void buildForm();
     QWidget *buildPlatformRow();
     QWidget *buildIconRow();
@@ -30,6 +34,8 @@ private:
     QLineEdit *addField(const QString &label);
 
     void newProject();
+    void showHome();
+    bool confirmLeavingProject();
     bool confirmGitNotice();
     void buildProject();
     void chooseIcon();
@@ -47,10 +53,13 @@ private:
 
     Project m_project;
 
+    QStackedWidget *m_pages = nullptr;
+    HomePage *m_home = nullptr;
     QWidget *m_form = nullptr;
     QFormLayout *m_fields = nullptr;
     QComboBox *m_platform = nullptr;
     QAction *m_build = nullptr;
+    QAction *m_close = nullptr;
     QAction *m_icon = nullptr;
     QLabel *m_iconPreview = nullptr;
     QLineEdit *m_buildDirectory = nullptr;
