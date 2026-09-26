@@ -8,6 +8,7 @@ class QAction;
 class QComboBox;
 class QFormLayout;
 class QLineEdit;
+class QWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -23,11 +24,15 @@ public:
 private:
     void buildForm();
     QWidget *buildPlatformRow();
+    QWidget *buildDirectoryRow();
     QLineEdit *addField(const QString &label);
 
     void newProject();
     bool confirmGitNotice();
     void buildProject();
+    void chooseBuildDirectory();
+    void showBuildDirectory();
+    void rememberBuildDirectory();
     bool confirmUnsavedEdits();
     bool hasUnsavedEdits() const;
     void chooseProject();
@@ -42,6 +47,7 @@ private:
     QFormLayout *m_fields = nullptr;
     QComboBox *m_platform = nullptr;
     QAction *m_build = nullptr;
+    QLineEdit *m_buildDirectory = nullptr;
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;
     QLineEdit *m_version = nullptr;

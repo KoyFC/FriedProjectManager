@@ -20,11 +20,22 @@ namespace
     }
 }
 
-QList<QStringList> Build::commands(int platform, QString *error)
+QString Build::defaultDirectory(int platform)
 {
+    return platform == PlatformVita ? QStringLiteral("build/vita") : QStringLiteral("build");
+}
+
+QList<QStringList> Build::commands(int platform, const QString &buildDirectory, QString *error)
+{
+    if (buildDirectory.isEmpty())
+    {
+        *error = QStringLiteral("There is no build directory to build in.");
+        return {};
+    }
+
     if (platform == PlatformPc)
     {
-        return pipeline(QStringLiteral("build"), {});
+        return pipeline(buildDirectory, {});
     }
 
     const QString vitasdk = qEnvironmentVariable("VITASDK");
@@ -42,6 +53,5 @@ QList<QStringList> Build::commands(int platform, QString *error)
         return {};
     }
 
-    return pipeline(QStringLiteral("build/vita"),
-                    {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
+    return pipeline(buildDirectory, {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
 }

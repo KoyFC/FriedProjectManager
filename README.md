@@ -46,6 +46,7 @@ Then run it:
   ```
 
   A Vita build needs `VITASDK` set, and both need `haxe` and `cmake` on the `PATH` the tool itself was started with. If the form holds edits the file does not, Build offers to save them first, since the build reads `project.fried` and not the form.
+- **Build directory** is a field of its own, remembered per project and per platform, defaulting to `build` and `build/vita`. A path inside the project is kept relative, and an absolute path builds wherever you point it. Only the CMake build tree moves: `build.hxml` writes the generated C++ to `build/cpp` and `fried_add_game()` reads it from there, so that part is the engine's to decide.
 
 A generated project compiles and runs as it comes out: `haxe build.hxml`, then `cmake -S . -B build && cmake --build build`, or the same with `-DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake` for a `.vpk`. Cloning the submodule needs `git` and network access to the engine repository.
 

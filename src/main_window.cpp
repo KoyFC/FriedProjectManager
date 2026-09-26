@@ -10,6 +10,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
@@ -20,12 +21,21 @@
 #include <QSettings>
 #include <QStatusBar>
 #include <QToolButton>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
+
+    // A project path holds separators, so it is percent encoded to stay one key.
+    QString buildDirectoryKey(const QString &project, int platform)
+    {
+        return QStringLiteral("buildDirectories/%1/%2")
+            .arg(platform == PlatformVita ? QStringLiteral("vita") : QStringLiteral("pc"),
+                 QString::fromUtf8(QUrl::toPercentEncoding(project)));
+    }
 }
 
 MainWindow::MainWindow()
@@ -53,11 +63,19 @@ void MainWindow::buildForm()
     m_form = new QWidget(this);
 
     QVBoxLayout *column = new QVBoxLayout(m_form);
-    column->addWidget(buildPlatformRow());
 
     m_fields = new QFormLayout();
     column->addLayout(m_fields);
     column->addStretch();
+
+    m_fields->addRow(QStringLiteral("Platform"), buildPlatformRow());
+    m_fields->addRow(QStringLiteral("Build directory"), buildDirectoryRow());
+
+    // Everything below the line is what project.fried holds.
+    QFrame *separator = new QFrame(m_form);
+    separator->setFrameShape(QFrame::HLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    m_fields->addRow(separator);
 
     m_name = addField(QStringLiteral("Name"));
     m_organization = addField(QStringLiteral("Organization"));
@@ -84,13 +102,63 @@ QWidget *MainWindow::buildPlatformRow()
     QToolButton *build = new QToolButton(row);
     build->setDefaultAction(m_build);
 
-    layout->addWidget(new QLabel(QStringLiteral("Platform"), row));
     layout->addWidget(m_platform);
     layout->addWidget(build);
     layout->addStretch();
 
     connect(m_platform, &QComboBox::currentIndexChanged, this, &MainWindow::showPlatformFields);
     return row;
+}
+
+QWidget *MainWindow::buildDirectoryRow()
+{
+    QWidget *row = new QWidget(m_form);
+    QHBoxLayout *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    m_buildDirectory = new QLineEdit(row);
+    QPushButton *browse = new QPushButton(QStringLiteral("Browse..."), row);
+
+    layout->addWidget(m_buildDirectory);
+    layout->addWidget(browse);
+
+    connect(browse, &QPushButton::clicked, this, &MainWindow::chooseBuildDirectory);
+    connect(m_buildDirectory, &QLineEdit::editingFinished, this, &MainWindow::rememberBuildDirectory);
+    return row;
+}
+
+void MainWindow::chooseBuildDirectory()
+{
+    const QDir project(m_project.directory());
+    const QString chosen = QFileDialog::getExistingDirectory(this, QStringLiteral("Build Directory"),
+                                                             project.filePath(m_buildDirectory->text()));
+    if (chosen.isEmpty())
+    {
+        return;
+    }
+
+    // A directory inside the project travels with it, so it is kept relative.
+    const QString relative = project.relativeFilePath(chosen);
+    m_buildDirectory->setText(relative.startsWith(QStringLiteral("..")) ? chosen : relative);
+    rememberBuildDirectory();
+}
+
+void MainWindow::showBuildDirectory()
+{
+    QSettings settings;
+    const QString key = buildDirectoryKey(m_project.directory(), m_platform->currentIndex());
+    m_buildDirectory->setText(settings.value(key, Build::defaultDirectory(m_platform->currentIndex())).toString());
+}
+
+void MainWindow::rememberBuildDirectory()
+{
+    if (m_project.directory().isEmpty() || m_buildDirectory->text().isEmpty())
+    {
+        return;
+    }
+
+    QSettings settings;
+    settings.setValue(buildDirectoryKey(m_project.directory(), m_platform->currentIndex()), m_buildDirectory->text());
 }
 
 QLineEdit *MainWindow::addField(const QString &label)
@@ -104,6 +172,11 @@ void MainWindow::showPlatformFields()
 {
     const bool vita = m_platform->currentIndex() == PlatformVita;
     m_fields->setRowVisible(m_vitaTitleId, vita);
+
+    if (!m_project.directory().isEmpty())
+    {
+        showBuildDirectory();
+    }
 }
 
 QString MainWindow::nearbyLocation() const
@@ -212,6 +285,8 @@ void MainWindow::showProject()
     m_windowTitle->setText(m_project.windowTitle());
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
+    showBuildDirectory();
+
     m_form->setEnabled(true);
     m_build->setEnabled(true);
     setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
@@ -257,8 +332,10 @@ void MainWindow::buildProject()
         return;
     }
 
+    rememberBuildDirectory();
+
     QString error;
-    const QList<QStringList> commands = Build::commands(m_platform->currentIndex(), &error);
+    const QList<QStringList> commands = Build::commands(m_platform->currentIndex(), m_buildDirectory->text(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);
