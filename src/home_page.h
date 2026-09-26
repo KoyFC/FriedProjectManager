@@ -4,7 +4,6 @@
 
 class QLabel;
 class QListWidget;
-class QListWidgetItem;
 class QPushButton;
 class QStackedWidget;
 

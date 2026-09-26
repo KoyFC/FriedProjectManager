@@ -16,7 +16,6 @@
 
 namespace
 {
-    // The name is kept as it was typed; the directory it goes in drops the spaces.
     QString directoryName(const QString &name)
     {
         static const QRegularExpression whitespace(QStringLiteral("\\s+"));

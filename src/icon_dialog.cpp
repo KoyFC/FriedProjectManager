@@ -6,7 +6,6 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
-#include <QFileInfo>
 #include <QFont>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -86,8 +85,7 @@ QWidget *IconDialog::buildSlot(int platform, const QString &title)
     QLabel *path = new QLabel(pathFor(platform), panel);
     path->setEnabled(false);
 
-    // Wrapping to a fixed width and height keeps a longer note from resizing the panel
-    // around it, which a fixed size preview cannot absorb.
+    // Fixed, so a longer note cannot resize the panel around a preview that will not shrink.
     target.notes = new QLabel(panel);
     target.notes->setWordWrap(true);
     target.notes->setFixedWidth(s_previewSize * 2);

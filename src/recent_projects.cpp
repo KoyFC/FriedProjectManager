@@ -7,7 +7,6 @@ namespace
 {
     const QString s_key = QStringLiteral("recentProjects/paths");
 
-    // Enough to cover everything worked on lately without the list needing a scrollbar.
     constexpr int s_limit = 20;
 }
 
@@ -25,8 +24,6 @@ void RecentProjects::remember(const QString &directory)
     }
 
     QStringList recent = paths();
-
-    // Opening one again moves it up rather than listing it twice.
     recent.removeAll(path);
     recent.prepend(path);
     while (recent.size() > s_limit)

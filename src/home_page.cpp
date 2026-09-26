@@ -25,16 +25,13 @@
 
 namespace
 {
-    // Where each row keeps the directory it stands for.
     constexpr int s_pathRole = Qt::UserRole;
 
-    // Whether the project file was there the last time the list was built.
     constexpr int s_missingRole = Qt::UserRole + 1;
 
     constexpr int s_rowHeight = 44;
     constexpr int s_iconSize = 32;
 
-    // The window icon stands for the project, since it is the one it shows while running.
     QIcon iconOf(const QString &directory)
     {
         QPixmap canvas(s_iconSize, s_iconSize);
@@ -49,8 +46,7 @@ namespace
             painter.drawImage(canvas.rect(), icon);
         }
 
-        // The edge keeps a white icon visible on a pale row, and gives a project
-        // without one the same width, so every row starts its text in one place.
+        // The edge shows a white icon on a pale row, and gives a project without one the same width.
         painter.setPen(QColor(0, 0, 0, 60));
         painter.drawRect(0, 0, s_iconSize - 1, s_iconSize - 1);
         return QIcon(canvas);

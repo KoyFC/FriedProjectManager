@@ -36,7 +36,6 @@ namespace
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
 
-    // Large enough to tell two icons apart on a form row.
     constexpr int s_iconPreviewSize = 32;
 
     // A project path holds separators, so it is percent encoded to stay one key.

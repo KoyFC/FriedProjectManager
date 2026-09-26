@@ -23,6 +23,5 @@ public:
     static bool write(const QString &projectDirectory, const QImage &pc, const QImage &vita, QString *error);
     static QString describe(const QImage &pc, const QImage &vita);
 
-    // Every format this build of Qt can read, as file dialog patterns.
     static QStringList readablePatterns();
 };

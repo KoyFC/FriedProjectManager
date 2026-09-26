@@ -5,7 +5,6 @@
 
 namespace
 {
-    // One shape for both platforms; only the build tree and the toolchain differ.
     QList<QStringList> pipeline(const QString &buildTree, const QStringList &configureExtras)
     {
         QStringList configure = {QStringLiteral("cmake"), QStringLiteral("-S"), QStringLiteral("."),

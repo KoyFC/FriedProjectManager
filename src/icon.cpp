@@ -12,13 +12,10 @@ namespace
     const QString s_pcPath = QStringLiteral("assets/icon.png");
     const QString s_vitaPath = QStringLiteral("sce_sys/icon0.png");
 
-    // What the console's installer accepts, and nothing else.
     constexpr int s_vitaSize = 128;
 
-    // No desktop draws a window icon larger than this.
     constexpr int s_pcLimit = 512;
 
-    // The most colours a palette PNG can hold.
     constexpr int s_paletteLimit = 256;
 
     // An icon is square wherever it is shown, so an oblong source keeps its middle.
