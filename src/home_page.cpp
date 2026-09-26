@@ -1,16 +1,22 @@
 #include "home_page.h"
 
+#include "icon.h"
 #include "project.h"
 #include "recent_projects.h"
 
 #include <QDir>
 #include <QFileInfo>
+#include <QColor>
+#include <QIcon>
+#include <QImage>
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
 #include <QStackedWidget>
+#include <QPainter>
+#include <QPixmap>
 #include <QSize>
 #include <QVBoxLayout>
 
@@ -20,6 +26,29 @@ namespace
     constexpr int s_pathRole = Qt::UserRole;
 
     constexpr int s_rowHeight = 44;
+    constexpr int s_iconSize = 32;
+
+    // The window icon stands for the project, since it is the one it shows while running.
+    QIcon iconOf(const QString &directory)
+    {
+        QPixmap canvas(s_iconSize, s_iconSize);
+        canvas.fill(Qt::transparent);
+
+        QPainter painter(&canvas);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+        const QImage icon(QDir(directory).filePath(Icon::pcPath()));
+        if (!icon.isNull())
+        {
+            painter.drawImage(canvas.rect(), icon);
+        }
+
+        // The edge keeps a white icon visible on a pale row, and gives a project
+        // without one the same width, so every row starts its text in one place.
+        painter.setPen(QColor(0, 0, 0, 60));
+        painter.drawRect(0, 0, s_iconSize - 1, s_iconSize - 1);
+        return QIcon(canvas);
+    }
 
     QString titleOf(const QString &directory)
     {
@@ -45,6 +74,7 @@ HomePage::HomePage(QWidget *parent)
 
     m_list = new QListWidget(this);
     m_list->setAlternatingRowColors(true);
+    m_list->setIconSize(QSize(s_iconSize, s_iconSize));
     connect(m_list, &QListWidget::itemDoubleClicked, this, &HomePage::openSelected);
     connect(m_list, &QListWidget::itemSelectionChanged, this, &HomePage::selectionChanged);
 
@@ -88,6 +118,7 @@ void HomePage::refresh()
         QListWidgetItem *item = new QListWidgetItem(
             QStringLiteral("%1\n%2").arg(titleOf(path), QDir::toNativeSeparators(path)), m_list);
         item->setData(s_pathRole, path);
+        item->setIcon(iconOf(path));
 
         // Two lines of text need the room, or one row runs into the next.
         item->setSizeHint(QSize(0, s_rowHeight));
