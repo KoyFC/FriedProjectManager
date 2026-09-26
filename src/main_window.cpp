@@ -1,5 +1,8 @@
 #include "main_window.h"
 
+#include "new_project_dialog.h"
+#include "project_template.h"
+
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -30,6 +33,7 @@ MainWindow::MainWindow()
     resize(900, 600);
 
     QMenu *fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
+    fileMenu->addAction(QStringLiteral("&New Project..."), QKeySequence::New, this, &MainWindow::newProject);
     fileMenu->addAction(QStringLiteral("&Open Project..."), QKeySequence::Open, this, &MainWindow::chooseProject);
     fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
 
@@ -91,13 +95,37 @@ void MainWindow::showPlatformFields()
     m_fields->setRowVisible(m_vitaTitleId, vita);
 }
 
+QString MainWindow::nearbyLocation() const
+{
+    if (m_project.directory().isEmpty())
+    {
+        return QDir::homePath();
+    }
+
+    return QDir::cleanPath(QDir(m_project.directory()).filePath(QStringLiteral("..")));
+}
+
+void MainWindow::newProject()
+{
+    NewProjectDialog dialog(this, nearbyLocation());
+    if (dialog.exec() != QDialog::Accepted)
+    {
+        return;
+    }
+
+    QString error;
+    if (!ProjectTemplate::write(dialog.directory(), dialog.name(), dialog.organization(), &error))
+    {
+        QMessageBox::warning(this, QStringLiteral("New Project"), error);
+        return;
+    }
+
+    openProject(dialog.directory());
+}
+
 void MainWindow::chooseProject()
 {
-    const QString startAt = m_project.directory().isEmpty()
-                                ? QDir::homePath()
-                                : QDir(m_project.directory()).filePath(QStringLiteral(".."));
-
-    const QString directory = QFileDialog::getExistingDirectory(this, QStringLiteral("Open Project"), startAt);
+    const QString directory = QFileDialog::getExistingDirectory(this, QStringLiteral("Open Project"), nearbyLocation());
     if (directory.isEmpty())
     {
         return;

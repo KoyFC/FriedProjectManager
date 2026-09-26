@@ -24,7 +24,9 @@ private:
     QWidget *buildPlatformRow();
     QLineEdit *addField(const QString &label);
 
+    void newProject();
     void chooseProject();
+    QString nearbyLocation() const;
     void showProject();
     void showPlatformFields();
     QString firstProblem(QLineEdit **field) const;

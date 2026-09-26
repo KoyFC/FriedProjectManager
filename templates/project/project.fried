@@ -1,0 +1,11 @@
+{
+	"name": "@NAME@",
+	"organization": "@ORGANIZATION@",
+	"version": "@VERSION@",
+	"window": {
+		"title": "@NAME@"
+	},
+	"vita": {
+		"titleId": "@TITLE_ID@"
+	}
+}

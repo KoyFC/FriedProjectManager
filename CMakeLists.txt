@@ -17,8 +17,22 @@ qt_add_executable(fried_project_manager
     src/main.cpp
     src/main_window.h
     src/main_window.cpp
+    src/new_project_dialog.h
+    src/new_project_dialog.cpp
     src/project.h
     src/project.cpp
+    src/project_template.h
+    src/project_template.cpp
+)
+
+qt_add_resources(fried_project_manager "templates"
+    PREFIX "/"
+    FILES
+        templates/project/CMakeLists.txt
+        templates/project/assets/white.png
+        templates/project/build.hxml
+        templates/project/project.fried
+        templates/project/src/Main.hx
 )
 
 target_link_libraries(fried_project_manager PRIVATE Qt6::Widgets)
