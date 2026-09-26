@@ -30,11 +30,13 @@ Then run it:
 - **New Project** writes a whole project directory, makes it a Git repository with the engine as a submodule, and opens it. Everything is staged, so the first commit is yours:
 
   ```
-  .gitignore         .vscode/           assets/white.png   sce_sys/
-  CMakeLists.txt     build.hxml         project.fried      src/Main.hx
+  .gitignore         .vscode/           assets/icon.png    sce_sys/
+  CMakeLists.txt     build.hxml         assets/white.png   src/Main.hx
+                                        project.fried
   ```
 
   `.vscode/` is the engine repository's configuration retargeted at the game: build, run and debug tasks, the `host-*.sh` wrappers that forward commands to the host when the editor is sandboxed, and the C++ include paths. `sce_sys/` holds the four files a `.vpk` needs, with flat white placeholder art to replace.
+- The generated `src/Main.hx` calls `window.setIcon(Assets.game("icon.png"))`, so both icons a project has are live from the first build: `assets/icon.png` is the window icon on PC, and `sce_sys/icon0.png` is what the Vita's installer shows. They cannot be one file, because the console only accepts a 128x128 palette PNG while a window icon is truecolor. Both ship flat white.
 - Creating one first shows a notice that it runs `git` and clones the engine repository, with a **Don't show this again** toggle. That choice is stored as `newProject/showGitNotice` in the tool's settings (`~/.config/Fried Engine/Fried Project Manager.conf` on Linux), so deleting the key brings the notice back.
 - **Open Project** reads an existing `project.fried`, and **Save** writes the edited fields back, keeping any keys the tool does not know about.
 - The platform selector hides the fields the chosen platform does not use, and **Build** (Ctrl+B, or the button beside it) runs the whole pipeline for it in a window that streams the output:

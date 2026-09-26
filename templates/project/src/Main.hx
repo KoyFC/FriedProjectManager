@@ -13,6 +13,7 @@ class Main {
 		Application.init();
 
 		var window = new Window(Project.windowTitle(), 960, 540);
+		window.setIcon(Assets.game("icon.png"));
 		window.onClose = function() {
 			Application.quit();
 		};
