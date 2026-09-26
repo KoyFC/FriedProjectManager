@@ -5,16 +5,21 @@
 
 namespace
 {
-    QList<QStringList> pipeline(const QString &buildTree, const QStringList &configureExtras)
+    QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras)
     {
+        const QString typeName = Build::name(type);
+
         QStringList configure = {QStringLiteral("cmake"), QStringLiteral("-S"), QStringLiteral("."),
-                                 QStringLiteral("-B"), buildTree};
+                                 QStringLiteral("-B"), buildTree,
+                                 QStringLiteral("-DCMAKE_BUILD_TYPE=%1").arg(typeName)};
         configure += configureExtras;
 
         return {
             {QStringLiteral("haxe"), QStringLiteral("build.hxml")},
             configure,
-            {QStringLiteral("cmake"), QStringLiteral("--build"), buildTree, QStringLiteral("--parallel")},
+            // A generator that holds every configuration at once ignores the variable and reads --config
+            {QStringLiteral("cmake"), QStringLiteral("--build"), buildTree, QStringLiteral("--config"), typeName,
+             QStringLiteral("--parallel")},
         };
     }
 }
@@ -24,7 +29,17 @@ QString Build::defaultDirectory(Platform platform)
     return platform == Platform::Vita ? QStringLiteral("build/vita") : QStringLiteral("build");
 }
 
-QList<QStringList> Build::commands(Platform platform, const QString &buildDirectory, QString *error)
+QString Build::name(Type type)
+{
+    return type == Type::Release ? QStringLiteral("Release") : QStringLiteral("Debug");
+}
+
+Build::Type Build::typeNamed(const QString &name)
+{
+    return name == Build::name(Type::Release) ? Type::Release : Type::Debug;
+}
+
+QList<QStringList> Build::commands(Platform platform, Type type, const QString &buildDirectory, QString *error)
 {
     if (buildDirectory.isEmpty())
     {
@@ -34,7 +49,7 @@ QList<QStringList> Build::commands(Platform platform, const QString &buildDirect
 
     if (platform == Platform::Pc)
     {
-        return pipeline(buildDirectory, {});
+        return pipeline(buildDirectory, type, {});
     }
 
     const QString vitasdk = qEnvironmentVariable("VITASDK");
@@ -52,5 +67,5 @@ QList<QStringList> Build::commands(Platform platform, const QString &buildDirect
         return {};
     }
 
-    return pipeline(buildDirectory, {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
+    return pipeline(buildDirectory, type, {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
 }

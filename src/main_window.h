@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platform.h"
+#include "build.h"
 #include "project.h"
 
 #include <QMainWindow>
@@ -32,6 +32,7 @@ private:
     void buildForm();
     QWidget *buildPlatformRow();
     QWidget *buildIconRow();
+    QWidget *buildTypeRow();
     QWidget *buildDirectoryRow();
     QLineEdit *addField(const QString &label);
 
@@ -43,6 +44,9 @@ private:
     void chooseIcon();
     void showIcon();
     void chooseBuildDirectory();
+    void showBuildType();
+    void rememberBuildType();
+    Build::Type selectedBuildType() const;
     void resetBuildDirectory();
     void showBuildDirectory();
     void showBuildDirectory(const QString &directory);
@@ -66,6 +70,7 @@ private:
     QWidget *m_form = nullptr;
     QFormLayout *m_fields = nullptr;
     QComboBox *m_platform = nullptr;
+    QComboBox *m_buildType = nullptr;
     QAction *m_build = nullptr;
     QAction *m_close = nullptr;
     QAction *m_icon = nullptr;

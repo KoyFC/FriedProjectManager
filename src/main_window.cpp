@@ -41,17 +41,32 @@ namespace
     // whichever side of the project it points at.
     const QString s_projectToken = QStringLiteral("{project}");
 
-    // A project path holds separators, so it is percent encoded to stay one key.
     int comboIndexOf(Platform platform)
     {
         return static_cast<int>(platform);
     }
 
+    int comboIndexOf(Build::Type type)
+    {
+        return static_cast<int>(type);
+    }
+
+    // A project path holds separators, so it is percent encoded to stay one key.
+    QString rememberedKey(const QString &setting, const QString &project, Platform platform)
+    {
+        return QStringLiteral("%1/%2/%3")
+            .arg(setting, platform == Platform::Vita ? QStringLiteral("vita") : QStringLiteral("pc"),
+                 QString::fromUtf8(QUrl::toPercentEncoding(project)));
+    }
+
     QString buildDirectoryKey(const QString &project, Platform platform)
     {
-        return QStringLiteral("buildDirectories/%1/%2")
-            .arg(platform == Platform::Vita ? QStringLiteral("vita") : QStringLiteral("pc"),
-                 QString::fromUtf8(QUrl::toPercentEncoding(project)));
+        return rememberedKey(QStringLiteral("buildDirectories"), project, platform);
+    }
+
+    QString buildTypeKey(const QString &project, Platform platform)
+    {
+        return rememberedKey(QStringLiteral("buildTypes"), project, platform);
     }
 }
 
@@ -114,6 +129,7 @@ void MainWindow::buildForm()
 
     m_fields->addRow(QStringLiteral("Platform"), buildPlatformRow());
     m_fields->addRow(QStringLiteral("Icon"), buildIconRow());
+    m_fields->addRow(QStringLiteral("Build type"), buildTypeRow());
     m_fields->addRow(QStringLiteral("Build directory"), buildDirectoryRow());
 
     m_buildWarning = new QLabel(m_form);
@@ -176,6 +192,25 @@ QWidget *MainWindow::buildIconRow()
     layout->addStretch();
 
     connect(change, &QPushButton::clicked, this, &MainWindow::chooseIcon);
+    return row;
+}
+
+QWidget *MainWindow::buildTypeRow()
+{
+    QWidget *row = new QWidget(m_form);
+    QHBoxLayout *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    m_buildType = new QComboBox(row);
+    m_buildType->insertItem(comboIndexOf(Build::Type::Debug), Build::name(Build::Type::Debug));
+    m_buildType->insertItem(comboIndexOf(Build::Type::Release), Build::name(Build::Type::Release));
+    m_buildType->setToolTip(QStringLiteral("Debug keeps the symbols a debugger needs. Release optimises, which is "
+                                           "what a build for players wants."));
+
+    layout->addWidget(m_buildType);
+    layout->addStretch();
+
+    connect(m_buildType, &QComboBox::currentIndexChanged, this, &MainWindow::rememberBuildType);
     return row;
 }
 
@@ -290,6 +325,31 @@ void MainWindow::showBuildDirectory(const QString &directory)
                                   : s_projectToken + QChar('/') + directory);
 }
 
+void MainWindow::showBuildType()
+{
+    QSettings settings;
+    const QString remembered =
+        settings.value(buildTypeKey(m_project.directory(), selectedPlatform()), Build::name(Build::Type::Debug))
+            .toString();
+    m_buildType->setCurrentIndex(comboIndexOf(Build::typeNamed(remembered)));
+}
+
+void MainWindow::rememberBuildType()
+{
+    if (m_project.directory().isEmpty())
+    {
+        return;
+    }
+
+    QSettings settings;
+    settings.setValue(buildTypeKey(m_project.directory(), selectedPlatform()), Build::name(selectedBuildType()));
+}
+
+Build::Type MainWindow::selectedBuildType() const
+{
+    return static_cast<Build::Type>(m_buildType->currentIndex());
+}
+
 void MainWindow::buildDirectoryChanged()
 {
     const QString chosen = chosenBuildDirectory();
@@ -380,6 +440,7 @@ void MainWindow::showPlatformFields()
     if (!m_project.directory().isEmpty())
     {
         showIcon();
+        showBuildType();
         showBuildDirectory();
     }
 
@@ -499,6 +560,7 @@ void MainWindow::showProject()
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
     showIcon();
+    showBuildType();
     showBuildDirectory();
 
     m_pages->setCurrentWidget(m_form);
@@ -549,16 +611,19 @@ void MainWindow::buildProject()
     }
 
     rememberBuildDirectory();
+    rememberBuildType();
 
     QString error;
-    const QList<QStringList> commands = Build::commands(selectedPlatform(), chosenBuildDirectory(), &error);
+    const QList<QStringList> commands =
+        Build::commands(selectedPlatform(), selectedBuildType(), chosenBuildDirectory(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);
         return;
     }
 
-    CommandDialog build(this, QStringLiteral("Build %1").arg(m_platform->currentText()), m_project.directory(), commands);
+    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(m_platform->currentText(), Build::name(selectedBuildType())),
+                        m_project.directory(), commands);
     build.offerToOpen(QStringLiteral("Open Build Folder"),
                       QDir(m_project.directory()).filePath(chosenBuildDirectory()));
     build.exec();
