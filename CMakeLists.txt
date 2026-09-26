@@ -10,13 +10,15 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
-# Turns on AUTOMOC, which the Q_OBJECT macro needs, and sets the C++ standard.
+# Turns on AUTOMOC, which Q_OBJECT needs, and sets the C++ standard.
 qt_standard_project_setup()
 
 qt_add_executable(fried_project_manager
     src/main.cpp
     src/main_window.h
     src/main_window.cpp
+    src/project.h
+    src/project.cpp
 )
 
 target_link_libraries(fried_project_manager PRIVATE Qt6::Widgets)
