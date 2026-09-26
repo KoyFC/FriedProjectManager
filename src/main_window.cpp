@@ -2,6 +2,7 @@
 
 #include "build.h"
 #include "command_dialog.h"
+#include "icon.h"
 #include "new_project_dialog.h"
 #include "project_template.h"
 
@@ -12,6 +13,7 @@
 #include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QImageReader>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
@@ -47,6 +49,12 @@ MainWindow::MainWindow()
     fileMenu->addAction(QStringLiteral("&New Project..."), QKeySequence::New, this, &MainWindow::newProject);
     fileMenu->addAction(QStringLiteral("&Open Project..."), QKeySequence::Open, this, &MainWindow::chooseProject);
     fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
+    fileMenu->addSeparator();
+
+    m_icon = new QAction(QStringLiteral("Set &Icon..."), this);
+    m_icon->setEnabled(false);
+    connect(m_icon, &QAction::triggered, this, &MainWindow::chooseIcon);
+    fileMenu->addAction(m_icon);
 
     m_build = new QAction(QStringLiteral("&Build"), this);
     m_build->setShortcut(QKeySequence(QStringLiteral("Ctrl+B")));
@@ -125,6 +133,27 @@ QWidget *MainWindow::buildDirectoryRow()
     connect(browse, &QPushButton::clicked, this, &MainWindow::chooseBuildDirectory);
     connect(m_buildDirectory, &QLineEdit::editingFinished, this, &MainWindow::rememberBuildDirectory);
     return row;
+}
+
+void MainWindow::chooseIcon()
+{
+    const QString source =
+        QFileDialog::getOpenFileName(this, QStringLiteral("Choose an icon image"), m_project.directory(),
+                                     QStringLiteral("Images (%1)").arg(Icon::readablePatterns().join(QChar(' '))));
+    if (source.isEmpty())
+    {
+        return;
+    }
+
+    QString report;
+    QString error;
+    if (!Icon::write(m_project.directory(), source, &report, &error))
+    {
+        QMessageBox::warning(this, s_applicationTitle, error);
+        return;
+    }
+
+    QMessageBox::information(this, s_applicationTitle, report);
 }
 
 void MainWindow::chooseBuildDirectory()
@@ -289,6 +318,7 @@ void MainWindow::showProject()
 
     m_form->setEnabled(true);
     m_build->setEnabled(true);
+    m_icon->setEnabled(true);
     setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
     statusBar()->showMessage(QDir::toNativeSeparators(m_project.filePath()));
 }

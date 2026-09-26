@@ -18,6 +18,8 @@ qt_add_executable(fried_project_manager
     src/build.cpp
     src/command_dialog.h
     src/command_dialog.cpp
+    src/icon.h
+    src/icon.cpp
     src/main.cpp
     src/main_window.h
     src/main_window.cpp

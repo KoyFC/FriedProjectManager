@@ -48,10 +48,11 @@ Then run it:
   ```
 
   A Vita build needs `VITASDK` set, and both need `haxe` and `cmake` on the `PATH` the tool itself was started with. If the form holds edits the file does not, Build offers to save them first, since the build reads `project.fried` and not the form.
+- **Set Icon...** takes one image in any format this Qt build can read and writes both of a project's icons from it: `assets/icon.png` truecolor for the window, and `sce_sys/icon0.png` as the 128x128 palette PNG the console's installer demands. It reports what it did, because an image usually cannot be used as it comes: an oblong source keeps its centre square, anything over 512x512 is reduced for the window icon, and a source under 128x128 is enlarged for the Vita and says it will look soft. Both files are staged before either is replaced, so a failure leaves the pair as it was. The copy next to the executable is refreshed by the next build, not by the action.
 - **Build directory** is a field of its own, remembered per project and per platform, defaulting to `build` and `build/vita`. A path inside the project is kept relative, and an absolute path builds wherever you point it. Only the CMake build tree moves: `build.hxml` writes the generated C++ to `build/cpp` and `fried_add_game()` reads it from there, so that part is the engine's to decide.
 
 A generated project compiles and runs as it comes out: `haxe build.hxml`, then `cmake -S . -B build && cmake --build build`, or the same with `-DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake` for a `.vpk`. Cloning the submodule needs `git` and network access to the engine repository.
 
 VitaSDK's packaging step does not quote the paths it is handed, so a space anywhere in a project's path lets it compile for the Vita but not be packaged. The New Project dialog handles that: the project keeps the name as typed, while its directory replaces the spaces with dashes (`My Demo Game` goes in `My-Demo-Game`), and it says so. If the location you picked contains a space of its own, which the tool cannot rename, it warns instead.
 
-Still to come: the icon action.
+Still to come: choosing a different image for the Vita icon than for the window icon.

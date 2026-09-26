@@ -30,6 +30,7 @@ private:
     void newProject();
     bool confirmGitNotice();
     void buildProject();
+    void chooseIcon();
     void chooseBuildDirectory();
     void showBuildDirectory();
     void rememberBuildDirectory();
@@ -47,6 +48,7 @@ private:
     QFormLayout *m_fields = nullptr;
     QComboBox *m_platform = nullptr;
     QAction *m_build = nullptr;
+    QAction *m_icon = nullptr;
     QLineEdit *m_buildDirectory = nullptr;
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;
