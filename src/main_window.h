@@ -12,6 +12,7 @@ class QComboBox;
 class QFormLayout;
 class QLabel;
 class QLineEdit;
+class QPushButton;
 class QStackedWidget;
 class QWidget;
 
@@ -42,7 +43,12 @@ private:
     void chooseIcon();
     void showIcon();
     void chooseBuildDirectory();
+    void resetBuildDirectory();
     void showBuildDirectory();
+    void showBuildDirectory(const QString &directory);
+    void buildDirectoryChanged();
+    QString chosenBuildDirectory() const;
+    QString vitaSpaceProblem() const;
     void rememberBuildDirectory();
     bool confirmUnsavedEdits();
     bool hasUnsavedEdits() const;
@@ -65,6 +71,8 @@ private:
     QAction *m_icon = nullptr;
     QLabel *m_iconPreview = nullptr;
     QLineEdit *m_buildDirectory = nullptr;
+    QPushButton *m_buildReset = nullptr;
+    QLabel *m_buildWarning = nullptr;
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;
     QLineEdit *m_version = nullptr;

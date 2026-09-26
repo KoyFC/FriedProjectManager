@@ -15,7 +15,6 @@
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QFrame>
-#include <QHBoxLayout>
 #include <QKeySequence>
 #include <QImage>
 #include <QLabel>
@@ -37,6 +36,10 @@ namespace
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
 
     constexpr int s_iconPreviewSize = 32;
+
+    // Stands for the project's own directory, so the field is one editable path
+    // whichever side of the project it points at.
+    const QString s_projectToken = QStringLiteral("{project}");
 
     // A project path holds separators, so it is percent encoded to stay one key.
     int comboIndexOf(Platform platform)
@@ -113,6 +116,10 @@ void MainWindow::buildForm()
     m_fields->addRow(QStringLiteral("Icon"), buildIconRow());
     m_fields->addRow(QStringLiteral("Build directory"), buildDirectoryRow());
 
+    m_buildWarning = new QLabel(m_form);
+    m_buildWarning->setWordWrap(true);
+    m_fields->addRow(QString(), m_buildWarning);
+
     // Everything below the line is what project.fried holds.
     QFrame *separator = new QFrame(m_form);
     separator->setFrameShape(QFrame::HLine);
@@ -179,13 +186,20 @@ QWidget *MainWindow::buildDirectoryRow()
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_buildDirectory = new QLineEdit(row);
+
     QPushButton *browse = new QPushButton(QStringLiteral("Browse..."), row);
+
+    m_buildReset = new QPushButton(QStringLiteral("Reset"), row);
+    m_buildReset->setToolTip(QStringLiteral("Back to where the chosen platform builds by default."));
 
     layout->addWidget(m_buildDirectory);
     layout->addWidget(browse);
+    layout->addWidget(m_buildReset);
 
     connect(browse, &QPushButton::clicked, this, &MainWindow::chooseBuildDirectory);
+    connect(m_buildReset, &QPushButton::clicked, this, &MainWindow::resetBuildDirectory);
     connect(m_buildDirectory, &QLineEdit::editingFinished, this, &MainWindow::rememberBuildDirectory);
+    connect(m_buildDirectory, &QLineEdit::textChanged, this, &MainWindow::buildDirectoryChanged);
     return row;
 }
 
@@ -250,7 +264,7 @@ void MainWindow::chooseBuildDirectory()
 {
     const QDir project(m_project.directory());
     const QString chosen = QFileDialog::getExistingDirectory(this, QStringLiteral("Build Directory"),
-                                                             project.filePath(m_buildDirectory->text()));
+                                                             project.filePath(chosenBuildDirectory()));
     if (chosen.isEmpty())
     {
         return;
@@ -258,7 +272,7 @@ void MainWindow::chooseBuildDirectory()
 
     // A directory inside the project travels with it, so it is kept relative.
     const QString relative = project.relativeFilePath(chosen);
-    m_buildDirectory->setText(relative.startsWith(QStringLiteral("..")) ? chosen : relative);
+    showBuildDirectory(relative.startsWith(QStringLiteral("..")) ? chosen : relative);
     rememberBuildDirectory();
 }
 
@@ -266,18 +280,89 @@ void MainWindow::showBuildDirectory()
 {
     QSettings settings;
     const QString key = buildDirectoryKey(m_project.directory(), selectedPlatform());
-    m_buildDirectory->setText(settings.value(key, Build::defaultDirectory(selectedPlatform())).toString());
+    showBuildDirectory(settings.value(key, Build::defaultDirectory(selectedPlatform())).toString());
+}
+
+void MainWindow::showBuildDirectory(const QString &directory)
+{
+    m_buildDirectory->setText(QDir::isAbsolutePath(directory)
+                                  ? QDir::toNativeSeparators(directory)
+                                  : s_projectToken + QChar('/') + directory);
+}
+
+void MainWindow::buildDirectoryChanged()
+{
+    const QString chosen = chosenBuildDirectory();
+    m_buildDirectory->setToolTip(QDir(m_project.directory()).filePath(chosen));
+    m_buildReset->setEnabled(chosen != Build::defaultDirectory(selectedPlatform()));
+
+    const QString problem = vitaSpaceProblem();
+    m_buildWarning->setText(problem);
+    m_fields->setRowVisible(m_buildWarning, !problem.isEmpty());
+}
+
+void MainWindow::resetBuildDirectory()
+{
+    showBuildDirectory(Build::defaultDirectory(selectedPlatform()));
+    rememberBuildDirectory();
+}
+
+// Whatever follows the token is relative to the project; anything else stands on its own.
+QString MainWindow::chosenBuildDirectory() const
+{
+    QString typed = m_buildDirectory->text().trimmed();
+    if (!typed.startsWith(s_projectToken))
+    {
+        return typed;
+    }
+
+    typed = typed.mid(s_projectToken.size());
+    while (typed.startsWith(QChar('/')) || typed.startsWith(QChar('\\')))
+    {
+        typed.remove(0, 1);
+    }
+    return typed;
+}
+
+// VitaSDK hands vita-pack-vpk every path unquoted, so a space splits an argument.
+QString MainWindow::vitaSpaceProblem() const
+{
+    if (selectedPlatform() != Platform::Vita)
+    {
+        return QString();
+    }
+
+    QStringList spaced;
+
+    // Its assets are packed straight from here, wherever the build tree is.
+    if (m_project.directory().contains(QChar(' ')))
+    {
+        spaced << QStringLiteral("the project's own path");
+    }
+    if (chosenBuildDirectory().contains(QChar(' ')))
+    {
+        spaced << QStringLiteral("the build directory");
+    }
+
+    if (spaced.isEmpty())
+    {
+        return QString();
+    }
+
+    return QStringLiteral("A Vita build will compile but fail to be packaged: VitaSDK does not quote the paths it "
+                          "packs with, and there is a space in %1.")
+        .arg(spaced.join(QStringLiteral(" and in ")));
 }
 
 void MainWindow::rememberBuildDirectory()
 {
-    if (m_project.directory().isEmpty() || m_buildDirectory->text().isEmpty())
+    if (m_project.directory().isEmpty() || chosenBuildDirectory().isEmpty())
     {
         return;
     }
 
     QSettings settings;
-    settings.setValue(buildDirectoryKey(m_project.directory(), selectedPlatform()), m_buildDirectory->text());
+    settings.setValue(buildDirectoryKey(m_project.directory(), selectedPlatform()), chosenBuildDirectory());
 }
 
 QLineEdit *MainWindow::addField(const QString &label)
@@ -295,8 +380,10 @@ void MainWindow::showPlatformFields()
     if (!m_project.directory().isEmpty())
     {
         showIcon();
-    showBuildDirectory();
+        showBuildDirectory();
     }
+
+    buildDirectoryChanged();
 }
 
 Platform MainWindow::selectedPlatform() const
@@ -464,7 +551,7 @@ void MainWindow::buildProject()
     rememberBuildDirectory();
 
     QString error;
-    const QList<QStringList> commands = Build::commands(selectedPlatform(), m_buildDirectory->text(), &error);
+    const QList<QStringList> commands = Build::commands(selectedPlatform(), chosenBuildDirectory(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);
@@ -473,7 +560,7 @@ void MainWindow::buildProject()
 
     CommandDialog build(this, QStringLiteral("Build %1").arg(m_platform->currentText()), m_project.directory(), commands);
     build.offerToOpen(QStringLiteral("Open Build Folder"),
-                      QDir(m_project.directory()).filePath(m_buildDirectory->text()));
+                      QDir(m_project.directory()).filePath(chosenBuildDirectory()));
     build.exec();
 
     statusBar()->showMessage(build.succeeded()
