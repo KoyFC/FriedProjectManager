@@ -19,7 +19,7 @@ jobs:
           # The oldest runner still offered, so the binary keeps working on older distributions
           - platform: linux
             runner: ubuntu-22.04
-            suffix: x86_64.AppImage
+            suffix: x86_64-qt-bundle.AppImage
           - platform: windows
             runner: windows-2022
             suffix: windows-x64.zip
@@ -51,8 +51,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      # Make a single file
-      - name: Package as an AppImage
+      - name: Lay out the AppDir
         if: matrix.platform == 'linux'
         run: |
           mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
@@ -62,6 +61,18 @@ jobs:
           # A stand-in until the tool has artwork of its own; replace this line with the real icon.
           convert -size 256x256 xc:"#3c3c3c" AppDir/usr/share/icons/hicolor/256x256/apps/fried-project-manager.png
 
+          # Copied before anything is bundled into it, so this one stays bare.
+          cp -r AppDir SystemQtDir
+
+          # appimagetool reads these from the top of the directory, while linuxdeploy writes its own.
+          ln -s usr/bin/fried_project_manager SystemQtDir/AppRun
+          cp packaging/linux/fried-project-manager.desktop SystemQtDir/
+          cp SystemQtDir/usr/share/icons/hicolor/256x256/apps/fried-project-manager.png SystemQtDir/
+          cp SystemQtDir/fried-project-manager.png SystemQtDir/.DirIcon
+
+      - name: Package the AppImage that carries Qt
+        if: matrix.platform == 'linux'
+        run: |
           releases=https://github.com/linuxdeploy
           curl -fsSLO $releases/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           curl -fsSLO $releases/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
@@ -76,18 +87,29 @@ jobs:
           export NO_STRIP=1
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
 
+      - name: Package the AppImage that uses the system Qt
+        if: matrix.platform == 'linux'
+        run: |
+          curl -fsSLO https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export ARCH=x86_64
+          ./appimagetool-x86_64.AppImage SystemQtDir \
+            "FriedProjectManager-${{ inputs.version }}-x86_64-system-qt.AppImage"
+
       - name: Package with the Qt libraries
         if: matrix.platform == 'windows'
         run: |
           mkdir package
           copy build\Release\fried_project_manager.exe package\
-          windeployqt --release --no-translations package\fried_project_manager.exe
+          windeployqt --release --no-translations --no-opengl-sw --no-system-d3d-compiler package\fried_project_manager.exe
           Compress-Archive -Path package\* -DestinationPath "${{ env.PACKAGE }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: fried-project-manager-${{ inputs.version }}-${{ matrix.platform }}
-          path: ${{ env.PACKAGE }}
+          path: FriedProjectManager-*
           if-no-files-found: error
 
   release:

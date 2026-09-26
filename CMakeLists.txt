@@ -38,6 +38,9 @@ qt_add_executable(fried_project_manager
     src/recent_projects.cpp
 )
 
+# Without this the tool opens a console window beside itself on Windows
+set_target_properties(fried_project_manager PROPERTIES WIN32_EXECUTABLE TRUE)
+
 qt_add_resources(fried_project_manager "templates"
     PREFIX "/"
     FILES
