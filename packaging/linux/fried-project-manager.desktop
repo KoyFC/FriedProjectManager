@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fried Project Manager
+Comment=Create and edit Fried Engine game projects
+Exec=fried_project_manager
+Icon=fried-project-manager
+Categories=Development;IDE;
+Terminal=false

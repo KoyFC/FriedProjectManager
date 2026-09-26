@@ -1,5 +1,6 @@
 name: Release
 
+# Release manually from the Actions tab
 on:
   workflow_dispatch:
     inputs:
@@ -15,13 +16,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The oldest runner still offered, so the binary keeps working on older distributions.
+          # The oldest runner still offered, so the binary keeps working on older distributions
           - platform: linux
             runner: ubuntu-22.04
-            executable: build/fried_project_manager
+            suffix: x86_64.AppImage
           - platform: windows
             runner: windows-2022
-            executable: build/Release/fried_project_manager.exe
+            suffix: windows-x64.zip
+
+    env:
+      PACKAGE: FriedProjectManager-${{ inputs.version }}-${{ matrix.suffix }}
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +34,10 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y libgl1-mesa-dev libxkbcommon-dev
+          sudo apt-get install --no-install-recommends -y \
+            libgl1-mesa-dev libxkbcommon-dev imagemagick \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -44,8 +51,41 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
+      # Make a single file
+      - name: Package as an AppImage
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp build/fried_project_manager AppDir/usr/bin/
+          cp packaging/linux/fried-project-manager.desktop AppDir/usr/share/applications/
+
+          # A stand-in until the tool has artwork of its own; replace this line with the real icon.
+          convert -size 256x256 xc:"#3c3c3c" AppDir/usr/share/icons/hicolor/256x256/apps/fried-project-manager.png
+
+          releases=https://github.com/linuxdeploy
+          curl -fsSLO $releases/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSLO $releases/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
+
+          # Unpacking the tools instead of mounting them keeps FUSE out of the runner.
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export OUTPUT="${{ env.PACKAGE }}"
+
+          # Stripping fails on any library the runner built with a section its own strip
+          # predates, and all it buys is a smaller download.
+          export NO_STRIP=1
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
+
+      - name: Package with the Qt libraries
+        if: matrix.platform == 'windows'
+        run: |
+          mkdir package
+          copy build\Release\fried_project_manager.exe package\
+          windeployqt --release --no-translations package\fried_project_manager.exe
+          Compress-Archive -Path package\* -DestinationPath "${{ env.PACKAGE }}"
+
       - uses: actions/upload-artifact@v4
         with:
           name: fried-project-manager-${{ inputs.version }}-${{ matrix.platform }}
-          path: ${{ matrix.executable }}
+          path: ${{ env.PACKAGE }}
           if-no-files-found: error
