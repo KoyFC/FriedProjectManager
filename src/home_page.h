@@ -25,10 +25,18 @@ signals:
 
 private:
     void openSelected();
+    void locateSelected();
+    void removeSelected();
     void selectionChanged();
+
+    void select(const QString &path);
+    QString selectedPath() const;
+    bool selectionIsMissing() const;
 
     QStackedWidget *m_area = nullptr;
     QListWidget *m_list = nullptr;
     QLabel *m_empty = nullptr;
     QPushButton *m_open = nullptr;
+    QPushButton *m_locate = nullptr;
+    QPushButton *m_remove = nullptr;
 };

@@ -6,6 +6,9 @@
 class Project
 {
 public:
+    // True when the directory holds a project file, whether or not it parses.
+    static bool exists(const QString &directory);
+
     bool load(const QString &directory, QString *error);
     bool save(QString *error) const;
 

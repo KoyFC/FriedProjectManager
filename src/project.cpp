@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QRegularExpression>
@@ -66,6 +67,11 @@ namespace
 }
 
 // Fields are checked on save, not here.
+bool Project::exists(const QString &directory)
+{
+    return QFileInfo::exists(QDir(directory).filePath(s_fileName));
+}
+
 bool Project::load(const QString &directory, QString *error)
 {
     const QString path = QDir(directory).filePath(s_fileName);

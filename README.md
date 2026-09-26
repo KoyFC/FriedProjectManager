@@ -28,6 +28,8 @@ Then run it:
 ## Status
 
 - With no project open the window shows a **home screen** listing the projects opened before, most recent first, each with its `assets/icon.png`, the name its `project.fried` declares, and the directory it lives in. The icon is read from disk every time the list is shown, so changing it shows up straight away, and a project without one keeps an empty box of the same width so the rows stay aligned. Opening one from the list, or creating or opening one any other way, moves it to the top. The list is kept as `recentProjects/paths` in the tool's settings and holds the last 20.
+- An entry whose `project.fried` is gone is listed as **(not found)** and cannot be opened. **Locate...** points it at where the project moved to, keeping it on the list, and opening one by double-click offers the same thing rather than reporting an error.
+- **Remove** takes any entry off the list, found or not. It deletes nothing: it says so before doing it, names the directory the project stays in, and opening that project again puts it back.
 - **Close Project** (Ctrl+W) goes back to that list, and offers to save first if the form holds edits the file does not.
 - **New Project** writes a whole project directory, makes it a Git repository with the engine as a submodule, and opens it. Everything is staged, so the first commit is yours:
 
