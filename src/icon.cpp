@@ -12,11 +12,9 @@ namespace
     const QString s_pcPath = QStringLiteral("assets/icon.png");
     const QString s_vitaPath = QStringLiteral("sce_sys/icon0.png");
 
-    constexpr int s_vitaSize = 128;
-
-    constexpr int s_pcLimit = 512;
-
-    constexpr int s_paletteLimit = 256;
+    constexpr int s_vitaIconSize = 128;
+    constexpr int s_largestWindowIcon = 512;
+    constexpr int s_paletteColourLimit = 256;
 
     // An icon is square wherever it is shown, so an oblong source keeps its middle.
     QImage squared(const QImage &image, QStringList *notes)
@@ -40,7 +38,7 @@ namespace
             for (int x = 0; x < rgb.width(); ++x)
             {
                 seen.insert(rgb.pixel(x, y));
-                if (seen.size() > s_paletteLimit)
+                if (seen.size() > s_paletteColourLimit)
                 {
                     return seen.size();
                 }
@@ -129,10 +127,10 @@ QImage Icon::forPc(const QImage &source, QStringList *notes)
     }
 
     QImage pc = squared(source, notes);
-    if (pc.width() > s_pcLimit)
+    if (pc.width() > s_largestWindowIcon)
     {
-        *notes << QStringLiteral("Reduced from %1x%1 to %2x%2.").arg(pc.width()).arg(s_pcLimit);
-        pc = pc.scaled(s_pcLimit, s_pcLimit, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        *notes << QStringLiteral("Reduced from %1x%1 to %2x%2.").arg(pc.width()).arg(s_largestWindowIcon);
+        pc = pc.scaled(s_largestWindowIcon, s_largestWindowIcon, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
     return pc.convertToFormat(pc.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
 }
@@ -145,19 +143,19 @@ QImage Icon::forVita(const QImage &source, QStringList *notes)
     }
 
     const QImage square = squared(source, notes);
-    if (square.width() < s_vitaSize)
+    if (square.width() < s_vitaIconSize)
     {
         *notes << QStringLiteral("Enlarged from %1x%1, so it will look soft.").arg(square.width());
     }
-    else if (square.width() > s_vitaSize)
+    else if (square.width() > s_vitaIconSize)
     {
         *notes << QStringLiteral("Reduced from %1x%1.").arg(square.width());
     }
 
-    const QImage resized = square.scaled(s_vitaSize, s_vitaSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    if (distinctColours(resized) > s_paletteLimit)
+    const QImage resized = square.scaled(s_vitaIconSize, s_vitaIconSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (distinctColours(resized) > s_paletteColourLimit)
     {
-        *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteLimit);
+        *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteColourLimit);
     }
 
     // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.

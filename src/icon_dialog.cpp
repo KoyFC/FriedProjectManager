@@ -20,9 +20,17 @@ namespace
     // The Vita icon is shown at its own size, so its palette is visible rather than smoothed over.
     constexpr int s_previewSize = 128;
 
-    QString pathFor(int platform)
+    QPixmap previewOf(const QImage &image)
     {
-        return platform == PlatformVita ? Icon::vitaPath() : Icon::pcPath();
+        const QPixmap preview = QPixmap::fromImage(image);
+        return preview.width() > s_previewSize
+                   ? preview.scaled(s_previewSize, s_previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                   : preview;
+    }
+
+    QString pathFor(Platform platform)
+    {
+        return platform == Platform::Vita ? Icon::vitaPath() : Icon::pcPath();
     }
 }
 
@@ -33,8 +41,8 @@ IconDialog::IconDialog(QWidget *parent, const QString &projectDirectory)
     setWindowTitle(QStringLiteral("Set Icon"));
 
     QHBoxLayout *panels = new QHBoxLayout;
-    panels->addWidget(buildSlot(PlatformPc, QStringLiteral("Window icon")));
-    panels->addWidget(buildSlot(PlatformVita, QStringLiteral("Vita icon")));
+    panels->addWidget(buildPanel(Platform::Pc, QStringLiteral("Window icon")));
+    panels->addWidget(buildPanel(Platform::Vita, QStringLiteral("Vita icon")));
 
     m_sameImage = new QCheckBox(QStringLiteral("Same image as the window icon"), this);
     m_sameImage->setChecked(true);
@@ -53,8 +61,8 @@ IconDialog::IconDialog(QWidget *parent, const QString &projectDirectory)
     layout->setSizeConstraint(QLayout::SetFixedSize);
 
     m_vita.choose->setEnabled(false);
-    showCurrent(PlatformPc);
-    showCurrent(PlatformVita);
+    showOnDisk(Platform::Pc);
+    showOnDisk(Platform::Vita);
 }
 
 QString IconDialog::report() const
@@ -62,14 +70,14 @@ QString IconDialog::report() const
     return m_report;
 }
 
-IconDialog::Slot &IconDialog::slot(int platform)
+IconDialog::PlatformIcon &IconDialog::iconFor(Platform platform)
 {
-    return platform == PlatformVita ? m_vita : m_pc;
+    return platform == Platform::Vita ? m_vita : m_pc;
 }
 
-QWidget *IconDialog::buildSlot(int platform, const QString &title)
+QWidget *IconDialog::buildPanel(Platform platform, const QString &title)
 {
-    Slot &target = slot(platform);
+    PlatformIcon &icon = iconFor(platform);
     QWidget *panel = new QWidget(this);
 
     QLabel *heading = new QLabel(title, panel);
@@ -77,34 +85,34 @@ QWidget *IconDialog::buildSlot(int platform, const QString &title)
     bold.setBold(true);
     heading->setFont(bold);
 
-    target.preview = new QLabel(panel);
-    target.preview->setFixedSize(s_previewSize, s_previewSize);
-    target.preview->setAlignment(Qt::AlignCenter);
-    target.preview->setFrameShape(QFrame::StyledPanel);
+    icon.preview = new QLabel(panel);
+    icon.preview->setFixedSize(s_previewSize, s_previewSize);
+    icon.preview->setAlignment(Qt::AlignCenter);
+    icon.preview->setFrameShape(QFrame::StyledPanel);
 
     QLabel *path = new QLabel(pathFor(platform), panel);
     path->setEnabled(false);
 
     // Fixed, so a longer note cannot resize the panel around a preview that will not shrink.
-    target.notes = new QLabel(panel);
-    target.notes->setWordWrap(true);
-    target.notes->setFixedWidth(s_previewSize * 2);
-    target.notes->setFixedHeight(target.notes->fontMetrics().lineSpacing() * 3);
-    target.notes->setAlignment(Qt::AlignTop);
+    icon.notes = new QLabel(panel);
+    icon.notes->setWordWrap(true);
+    icon.notes->setFixedWidth(s_previewSize * 2);
+    icon.notes->setFixedHeight(icon.notes->fontMetrics().lineSpacing() * 3);
+    icon.notes->setAlignment(Qt::AlignTop);
 
-    target.choose = new QPushButton(QStringLiteral("Choose..."), panel);
-    connect(target.choose, &QPushButton::clicked, this, [this, platform] { chooseFor(platform); });
+    icon.choose = new QPushButton(QStringLiteral("Choose..."), panel);
+    connect(icon.choose, &QPushButton::clicked, this, [this, platform] { chooseFor(platform); });
 
     QVBoxLayout *layout = new QVBoxLayout(panel);
     layout->addWidget(heading);
-    layout->addWidget(target.preview);
+    layout->addWidget(icon.preview);
     layout->addWidget(path);
-    layout->addWidget(target.choose);
-    layout->addWidget(target.notes);
+    layout->addWidget(icon.choose);
+    layout->addWidget(icon.notes);
     return panel;
 }
 
-void IconDialog::chooseFor(int platform)
+void IconDialog::chooseFor(Platform platform)
 {
     const QString chosen =
         QFileDialog::getOpenFileName(this, QStringLiteral("Choose an icon image"), m_directory,
@@ -123,66 +131,55 @@ void IconDialog::chooseFor(int platform)
     }
 
     render(platform, source);
-    if (platform == PlatformPc && m_sameImage->isChecked())
+    if (platform == Platform::Pc && m_sameImage->isChecked())
     {
-        render(PlatformVita, source);
+        render(Platform::Vita, source);
     }
 
     m_write->setEnabled(m_pc.chosen || m_vita.chosen);
 }
 
-void IconDialog::render(int platform, const QImage &source)
+void IconDialog::render(Platform platform, const QImage &source)
 {
-    Slot &target = slot(platform);
-    target.source = source;
-    target.chosen = true;
+    PlatformIcon &icon = iconFor(platform);
+    icon.source = source;
+    icon.chosen = true;
 
     QStringList notes;
-    target.rendered = platform == PlatformVita ? Icon::forVita(source, &notes) : Icon::forPc(source, &notes);
-    showSlot(platform, notes);
+    icon.rendered = platform == Platform::Vita ? Icon::forVita(source, &notes) : Icon::forPc(source, &notes);
+    showRendered(platform, notes);
 }
 
-void IconDialog::showSlot(int platform, const QStringList &notes)
+void IconDialog::showRendered(Platform platform, const QStringList &notes)
 {
-    Slot &target = slot(platform);
-    QPixmap preview = QPixmap::fromImage(target.rendered);
-    if (preview.width() > s_previewSize)
-    {
-        preview = preview.scaled(s_previewSize, s_previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-
-    target.preview->setPixmap(preview);
+    PlatformIcon &icon = iconFor(platform);
+    icon.preview->setPixmap(previewOf(icon.rendered));
 
     QStringList sentences;
-    sentences << QStringLiteral("%1x%1.").arg(target.rendered.width());
+    sentences << QStringLiteral("%1x%1.").arg(icon.rendered.width());
     sentences << notes;
-    target.notes->setText(sentences.join(QChar(' ')));
+    icon.notes->setText(sentences.join(QChar(' ')));
 }
 
-void IconDialog::showCurrent(int platform)
+void IconDialog::showOnDisk(Platform platform)
 {
-    Slot &target = slot(platform);
-    target.source = QImage();
-    target.rendered = QImage();
-    target.chosen = false;
+    PlatformIcon &icon = iconFor(platform);
+    icon.source = QImage();
+    icon.rendered = QImage();
+    icon.chosen = false;
 
     const QString path = QDir(m_directory).filePath(pathFor(platform));
     const QImage existing(path);
     if (existing.isNull())
     {
-        target.preview->setPixmap(QPixmap());
-        target.preview->setText(QStringLiteral("none"));
-        target.notes->setText(QStringLiteral("This project has no %1 yet.").arg(pathFor(platform)));
+        icon.preview->setPixmap(QPixmap());
+        icon.preview->setText(QStringLiteral("none"));
+        icon.notes->setText(QStringLiteral("This project has no %1 yet.").arg(pathFor(platform)));
         return;
     }
 
-    QPixmap preview = QPixmap::fromImage(existing);
-    if (preview.width() > s_previewSize)
-    {
-        preview = preview.scaled(s_previewSize, s_previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-    target.preview->setPixmap(preview);
-    target.notes->setText(QStringLiteral("%1x%2 already there, and left alone.").arg(existing.width()).arg(existing.height()));
+    icon.preview->setPixmap(previewOf(existing));
+    icon.notes->setText(QStringLiteral("%1x%2 already there, and left alone.").arg(existing.width()).arg(existing.height()));
 }
 
 void IconDialog::sameImageToggled(bool same)
@@ -195,11 +192,11 @@ void IconDialog::sameImageToggled(bool same)
 
     if (m_pc.chosen)
     {
-        render(PlatformVita, m_pc.source);
+        render(Platform::Vita, m_pc.source);
     }
     else
     {
-        showCurrent(PlatformVita);
+        showOnDisk(Platform::Vita);
     }
     m_write->setEnabled(m_pc.chosen || m_vita.chosen);
 }

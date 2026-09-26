@@ -39,10 +39,15 @@ namespace
     constexpr int s_iconPreviewSize = 32;
 
     // A project path holds separators, so it is percent encoded to stay one key.
-    QString buildDirectoryKey(const QString &project, int platform)
+    int comboIndexOf(Platform platform)
+    {
+        return static_cast<int>(platform);
+    }
+
+    QString buildDirectoryKey(const QString &project, Platform platform)
     {
         return QStringLiteral("buildDirectories/%1/%2")
-            .arg(platform == PlatformVita ? QStringLiteral("vita") : QStringLiteral("pc"),
+            .arg(platform == Platform::Vita ? QStringLiteral("vita") : QStringLiteral("pc"),
                  QString::fromUtf8(QUrl::toPercentEncoding(project)));
     }
 }
@@ -131,8 +136,8 @@ QWidget *MainWindow::buildPlatformRow()
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_platform = new QComboBox(row);
-    m_platform->insertItem(PlatformPc, QStringLiteral("PC"));
-    m_platform->insertItem(PlatformVita, QStringLiteral("PlayStation Vita"));
+    m_platform->insertItem(comboIndexOf(Platform::Pc), QStringLiteral("PC"));
+    m_platform->insertItem(comboIndexOf(Platform::Vita), QStringLiteral("PlayStation Vita"));
 
     QToolButton *build = new QToolButton(row);
     build->setDefaultAction(m_build);
@@ -260,8 +265,8 @@ void MainWindow::chooseBuildDirectory()
 void MainWindow::showBuildDirectory()
 {
     QSettings settings;
-    const QString key = buildDirectoryKey(m_project.directory(), m_platform->currentIndex());
-    m_buildDirectory->setText(settings.value(key, Build::defaultDirectory(m_platform->currentIndex())).toString());
+    const QString key = buildDirectoryKey(m_project.directory(), selectedPlatform());
+    m_buildDirectory->setText(settings.value(key, Build::defaultDirectory(selectedPlatform())).toString());
 }
 
 void MainWindow::rememberBuildDirectory()
@@ -272,7 +277,7 @@ void MainWindow::rememberBuildDirectory()
     }
 
     QSettings settings;
-    settings.setValue(buildDirectoryKey(m_project.directory(), m_platform->currentIndex()), m_buildDirectory->text());
+    settings.setValue(buildDirectoryKey(m_project.directory(), selectedPlatform()), m_buildDirectory->text());
 }
 
 QLineEdit *MainWindow::addField(const QString &label)
@@ -284,7 +289,7 @@ QLineEdit *MainWindow::addField(const QString &label)
 
 void MainWindow::showPlatformFields()
 {
-    const bool vita = m_platform->currentIndex() == PlatformVita;
+    const bool vita = selectedPlatform() == Platform::Vita;
     m_fields->setRowVisible(m_vitaTitleId, vita);
 
     if (!m_project.directory().isEmpty())
@@ -292,6 +297,11 @@ void MainWindow::showPlatformFields()
         showIcon();
     showBuildDirectory();
     }
+}
+
+Platform MainWindow::selectedPlatform() const
+{
+    return static_cast<Platform>(m_platform->currentIndex());
 }
 
 QString MainWindow::nearbyLocation() const
@@ -454,7 +464,7 @@ void MainWindow::buildProject()
     rememberBuildDirectory();
 
     QString error;
-    const QList<QStringList> commands = Build::commands(m_platform->currentIndex(), m_buildDirectory->text(), &error);
+    const QList<QStringList> commands = Build::commands(selectedPlatform(), m_buildDirectory->text(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platform.h"
 #include "project.h"
 
 #include <QMainWindow>
@@ -46,6 +47,7 @@ private:
     bool confirmUnsavedEdits();
     bool hasUnsavedEdits() const;
     void chooseProject();
+    Platform selectedPlatform() const;
     QString nearbyLocation() const;
     void showProject();
     void showPlatformFields();

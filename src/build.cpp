@@ -19,12 +19,12 @@ namespace
     }
 }
 
-QString Build::defaultDirectory(int platform)
+QString Build::defaultDirectory(Platform platform)
 {
-    return platform == PlatformVita ? QStringLiteral("build/vita") : QStringLiteral("build");
+    return platform == Platform::Vita ? QStringLiteral("build/vita") : QStringLiteral("build");
 }
 
-QList<QStringList> Build::commands(int platform, const QString &buildDirectory, QString *error)
+QList<QStringList> Build::commands(Platform platform, const QString &buildDirectory, QString *error)
 {
     if (buildDirectory.isEmpty())
     {
@@ -32,7 +32,7 @@ QList<QStringList> Build::commands(int platform, const QString &buildDirectory, 
         return {};
     }
 
-    if (platform == PlatformPc)
+    if (platform == Platform::Pc)
     {
         return pipeline(buildDirectory, {});
     }

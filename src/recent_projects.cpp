@@ -5,14 +5,14 @@
 
 namespace
 {
-    const QString s_key = QStringLiteral("recentProjects/paths");
+    const QString s_pathsKey = QStringLiteral("recentProjects/paths");
 
-    constexpr int s_limit = 20;
+    constexpr int s_mostRemembered = 20;
 }
 
 QStringList RecentProjects::paths()
 {
-    return QSettings().value(s_key).toStringList();
+    return QSettings().value(s_pathsKey).toStringList();
 }
 
 void RecentProjects::remember(const QString &directory)
@@ -26,12 +26,12 @@ void RecentProjects::remember(const QString &directory)
     QStringList recent = paths();
     recent.removeAll(path);
     recent.prepend(path);
-    while (recent.size() > s_limit)
+    while (recent.size() > s_mostRemembered)
     {
         recent.removeLast();
     }
 
-    QSettings().setValue(s_key, recent);
+    QSettings().setValue(s_pathsKey, recent);
 }
 
 void RecentProjects::forget(const QString &directory)
@@ -39,6 +39,6 @@ void RecentProjects::forget(const QString &directory)
     QStringList recent = paths();
     if (recent.removeAll(QDir::cleanPath(directory)) > 0)
     {
-        QSettings().setValue(s_key, recent);
+        QSettings().setValue(s_pathsKey, recent);
     }
 }

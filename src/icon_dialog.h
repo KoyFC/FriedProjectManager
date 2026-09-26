@@ -1,6 +1,6 @@
 #pragma once
 
-#include "build.h"
+#include "platform.h"
 
 #include <QDialog>
 #include <QImage>
@@ -21,7 +21,7 @@ public:
     QString report() const;
 
 private:
-    struct Slot
+    struct PlatformIcon
     {
         QLabel *preview = nullptr;
         QLabel *notes = nullptr;
@@ -31,21 +31,21 @@ private:
         bool chosen = false;
     };
 
-    QWidget *buildSlot(int platform, const QString &title);
-    void chooseFor(int platform);
-    void render(int platform, const QImage &source);
-    void showSlot(int platform, const QStringList &notes);
-    void showCurrent(int platform);
+    QWidget *buildPanel(Platform platform, const QString &title);
+    void chooseFor(Platform platform);
+    void render(Platform platform, const QImage &source);
+    void showRendered(Platform platform, const QStringList &notes);
+    void showOnDisk(Platform platform);
     void sameImageToggled(bool same);
     void write();
 
-    Slot &slot(int platform);
+    PlatformIcon &iconFor(Platform platform);
 
     QString m_directory;
     QString m_report;
 
-    Slot m_pc;
-    Slot m_vita;
+    PlatformIcon m_pc;
+    PlatformIcon m_vita;
     QCheckBox *m_sameImage = nullptr;
     QPushButton *m_write = nullptr;
 };
