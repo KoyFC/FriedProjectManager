@@ -639,6 +639,7 @@ void MainWindow::buildProject()
 
     CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(m_platform->currentText(), Build::name(selectedBuildType())),
                         m_project.directory(), commands);
+    build.setActivity(QStringLiteral("Compiling"));
     build.offerToOpen(QStringLiteral("Open Build Folder"),
                       QDir(m_project.directory()).filePath(chosenBuildDirectory()));
     build.exec();
