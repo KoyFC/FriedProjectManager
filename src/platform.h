@@ -3,5 +3,6 @@
 enum class Platform
 {
     Pc,
-    Vita
+    Vita,
+    Switch
 };

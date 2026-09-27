@@ -51,12 +51,26 @@ namespace
         return static_cast<int>(type);
     }
 
+    QString settingsName(Platform platform)
+    {
+        if (platform == Platform::Vita)
+        {
+            return QStringLiteral("vita");
+        }
+
+        if (platform == Platform::Switch)
+        {
+            return QStringLiteral("switch");
+        }
+
+        return QStringLiteral("pc");
+    }
+
     // A project path holds separators, so it is percent encoded to stay one key.
     QString rememberedKey(const QString &setting, const QString &project, Platform platform)
     {
         return QStringLiteral("%1/%2/%3")
-            .arg(setting, platform == Platform::Vita ? QStringLiteral("vita") : QStringLiteral("pc"),
-                 QString::fromUtf8(QUrl::toPercentEncoding(project)));
+            .arg(setting, settingsName(platform), QString::fromUtf8(QUrl::toPercentEncoding(project)));
     }
 
     QString buildDirectoryKey(const QString &project, Platform platform)
@@ -161,6 +175,7 @@ QWidget *MainWindow::buildPlatformRow()
     m_platform = new QComboBox(row);
     m_platform->insertItem(comboIndexOf(Platform::Pc), QStringLiteral("PC"));
     m_platform->insertItem(comboIndexOf(Platform::Vita), QStringLiteral("PlayStation Vita"));
+    m_platform->insertItem(comboIndexOf(Platform::Switch), QStringLiteral("Nintendo Switch"));
 
     QToolButton *build = new QToolButton(row);
     build->setDefaultAction(m_build);

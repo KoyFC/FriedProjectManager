@@ -5,6 +5,50 @@
 
 namespace
 {
+    struct ConsoleToolchain
+    {
+        const char *variable;
+        QString relativePath;
+        QString console;
+    };
+
+    ConsoleToolchain toolchainOf(Platform platform)
+    {
+        if (platform == Platform::Vita)
+        {
+            return {"VITASDK", QStringLiteral("share/vita.toolchain.cmake"), QStringLiteral("Vita")};
+        }
+
+        return {"DEVKITPRO", QStringLiteral("cmake/Switch.cmake"), QStringLiteral("Switch")};
+    }
+
+    // Empty when the SDK is not installed or not where its variable points. Both
+    // SDKs export that variable from a shell profile, so a manager started from a
+    // desktop menu may never have inherited it.
+    QString consoleToolchainFile(Platform platform, QString *error)
+    {
+        const ConsoleToolchain toolchain = toolchainOf(platform);
+
+        const QString sdk = qEnvironmentVariable(toolchain.variable);
+        if (sdk.isEmpty())
+        {
+            *error = QStringLiteral("%1 is not set, so there is no %2 toolchain to build with.")
+                         .arg(QString::fromLatin1(toolchain.variable), toolchain.console);
+            return {};
+        }
+
+        const QString file = QDir(sdk).filePath(toolchain.relativePath);
+        if (!QFileInfo::exists(file))
+        {
+            *error = QStringLiteral("%1 points at %2, where there is no %3.")
+                         .arg(QString::fromLatin1(toolchain.variable), QDir::toNativeSeparators(sdk),
+                              toolchain.relativePath);
+            return {};
+        }
+
+        return file;
+    }
+
     QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras)
     {
         const QString typeName = Build::name(type);
@@ -26,7 +70,17 @@ namespace
 
 QString Build::defaultDirectory(Platform platform)
 {
-    return platform == Platform::Vita ? QStringLiteral("build/vita") : QStringLiteral("build");
+    if (platform == Platform::Vita)
+    {
+        return QStringLiteral("build/vita");
+    }
+
+    if (platform == Platform::Switch)
+    {
+        return QStringLiteral("build/switch");
+    }
+
+    return QStringLiteral("build");
 }
 
 QString Build::name(Type type)
@@ -52,18 +106,9 @@ QList<QStringList> Build::commands(Platform platform, Type type, const QString &
         return pipeline(buildDirectory, type, {});
     }
 
-    const QString vitasdk = qEnvironmentVariable("VITASDK");
-    if (vitasdk.isEmpty())
+    const QString toolchain = consoleToolchainFile(platform, error);
+    if (toolchain.isEmpty())
     {
-        *error = QStringLiteral("VITASDK is not set, so there is no Vita toolchain to build with.");
-        return {};
-    }
-
-    const QString toolchain = QDir(vitasdk).filePath(QStringLiteral("share/vita.toolchain.cmake"));
-    if (!QFileInfo::exists(toolchain))
-    {
-        *error = QStringLiteral("VITASDK points at %1, where there is no share/vita.toolchain.cmake.")
-                     .arg(QDir::toNativeSeparators(vitasdk));
         return {};
     }
 
