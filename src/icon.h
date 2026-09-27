@@ -1,27 +1,29 @@
 #pragma once
 
+#include "platform.h"
+
 #include <QImage>
+#include <QMap>
 #include <QString>
 #include <QStringList>
 
-// A project keeps two icons, because the console's installer reads a palette PNG of
-// one fixed size while a window icon is truecolor of any size.
+// A project keeps one icon per platform, because a window icon is truecolor of any
+// size while each console reads one fixed size in a format of its own.
 class Icon
 {
 public:
-    static QString pcPath();
-    static QString vitaPath();
+    static QString path(Platform platform);
 
     // Null when the file cannot be read as an image, with the reason in error.
     static QImage read(const QString &sourceImage, QString *error);
 
-    // What each file would hold, saying in notes whatever the source had to become.
-    static QImage forPc(const QImage &source, QStringList *notes);
-    static QImage forVita(const QImage &source, QStringList *notes);
+    // What that platform's file would hold, saying in notes whatever the source
+    // had to become.
+    static QImage render(Platform platform, const QImage &source, QStringList *notes);
 
-    // A null image leaves that file as it is.
-    static bool write(const QString &projectDirectory, const QImage &pc, const QImage &vita, QString *error);
-    static QString describe(const QImage &pc, const QImage &vita);
+    // A null image leaves that platform's file as it is.
+    static bool write(const QString &projectDirectory, const QMap<Platform, QImage> &icons, QString *error);
+    static QString describe(const QMap<Platform, QImage> &icons);
 
     static QStringList readablePatterns();
 };

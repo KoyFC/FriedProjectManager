@@ -4,6 +4,7 @@
 
 #include <QDialog>
 #include <QImage>
+#include <QMap>
 
 class QCheckBox;
 class QLabel;
@@ -31,7 +32,7 @@ private:
         bool chosen = false;
     };
 
-    QWidget *buildPanel(Platform platform, const QString &title);
+    QWidget *buildPanel(Platform platform);
     void chooseFor(Platform platform);
     void render(Platform platform, const QImage &source);
     void showRendered(Platform platform, const QStringList &notes);
@@ -40,12 +41,12 @@ private:
     void write();
 
     PlatformIcon &iconFor(Platform platform);
+    bool anyChosen() const;
 
     QString m_directory;
     QString m_report;
 
-    PlatformIcon m_pc;
-    PlatformIcon m_vita;
+    QMap<Platform, PlatformIcon> m_icons;
     QCheckBox *m_sameImage = nullptr;
     QPushButton *m_write = nullptr;
 };

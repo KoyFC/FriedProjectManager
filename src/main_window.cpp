@@ -198,7 +198,7 @@ QWidget *MainWindow::buildIconRow()
     m_iconPreview->setFixedSize(s_iconPreviewSize, s_iconPreviewSize);
     m_iconPreview->setAlignment(Qt::AlignCenter);
     m_iconPreview->setFrameShape(QFrame::StyledPanel);
-    m_iconPreview->setToolTip(Icon::pcPath());
+    m_iconPreview->setToolTip(Icon::path(Platform::Pc));
 
     QPushButton *change = new QPushButton(QStringLiteral("Change..."), row);
 
@@ -305,7 +305,7 @@ void MainWindow::chooseIcon()
 
 void MainWindow::showIcon()
 {
-    const QImage icon(QDir(m_project.directory()).filePath(Icon::pcPath()));
+    const QImage icon(QDir(m_project.directory()).filePath(Icon::path(Platform::Pc)));
     m_iconPreview->setPixmap(QPixmap::fromImage(icon).scaled(s_iconPreviewSize, s_iconPreviewSize, Qt::KeepAspectRatio,
                                                              Qt::SmoothTransformation));
 }

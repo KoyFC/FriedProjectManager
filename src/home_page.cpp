@@ -40,7 +40,7 @@ namespace
         QPainter painter(&canvas);
         painter.setRenderHint(QPainter::SmoothPixmapTransform);
 
-        const QImage icon(QDir(directory).filePath(Icon::pcPath()));
+        const QImage icon(QDir(directory).filePath(Icon::path(Platform::Pc)));
         if (!icon.isNull())
         {
             painter.drawImage(canvas.rect(), icon);

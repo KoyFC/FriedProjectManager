@@ -4,17 +4,27 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QImageWriter>
+#include <QPainter>
 #include <QSaveFile>
 #include <QSet>
+
+#include <list>
 
 namespace
 {
     const QString s_pcPath = QStringLiteral("assets/icon.png");
     const QString s_vitaPath = QStringLiteral("sce_sys/icon0.png");
+    const QString s_switchPath = QStringLiteral("switch/icon.jpg");
 
     constexpr int s_vitaIconSize = 128;
+    constexpr int s_switchIconSize = 256;
     constexpr int s_largestWindowIcon = 512;
     constexpr int s_paletteColourLimit = 256;
+
+    const char *formatOf(Platform platform)
+    {
+        return platform == Platform::Switch ? "jpg" : "png";
+    }
 
     // An icon is square wherever it is shown, so an oblong source keeps its middle.
     QImage squared(const QImage &image, QStringList *notes)
@@ -27,6 +37,21 @@ namespace
         const int side = qMin(image.width(), image.height());
         *notes << QStringLiteral("Uses the centre %1x%1 square of %2x%3.").arg(side).arg(image.width()).arg(image.height());
         return image.copy((image.width() - side) / 2, (image.height() - side) / 2, side, side);
+    }
+
+    // A console icon is one fixed size, so the source is always resized to it.
+    QImage resizedTo(const QImage &square, int size, QStringList *notes)
+    {
+        if (square.width() < size)
+        {
+            *notes << QStringLiteral("Enlarged from %1x%1, so it will look soft.").arg(square.width());
+        }
+        else if (square.width() > size)
+        {
+            *notes << QStringLiteral("Reduced from %1x%1.").arg(square.width());
+        }
+
+        return square.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
 
     int distinctColours(const QImage &image)
@@ -47,7 +72,66 @@ namespace
         return seen.size();
     }
 
-    bool stage(QSaveFile &file, const QImage &image, QString *error)
+    QImage forPc(const QImage &source, QStringList *notes)
+    {
+        QImage pc = squared(source, notes);
+        if (pc.width() > s_largestWindowIcon)
+        {
+            *notes << QStringLiteral("Reduced from %1x%1 to %2x%2.").arg(pc.width()).arg(s_largestWindowIcon);
+            pc = pc.scaled(s_largestWindowIcon, s_largestWindowIcon, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        }
+        return pc.convertToFormat(pc.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+    }
+
+    QImage forVita(const QImage &source, QStringList *notes)
+    {
+        const QImage resized = resizedTo(squared(source, notes), s_vitaIconSize, notes);
+        if (distinctColours(resized) > s_paletteColourLimit)
+        {
+            *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteColourLimit);
+        }
+
+        // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.
+        return resized.convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
+    }
+
+    QImage forSwitch(const QImage &source, QStringList *notes)
+    {
+        const QImage resized = resizedTo(squared(source, notes), s_switchIconSize, notes);
+        if (resized.hasAlphaChannel())
+        {
+            *notes << QStringLiteral("Flattened onto black, since a JPEG holds no transparency.");
+        }
+
+        // Composited rather than converted, so a transparent pixel becomes black
+        // instead of whatever colour happened to sit underneath it.
+        QImage flattened(s_switchIconSize, s_switchIconSize, QImage::Format_RGB32);
+        flattened.fill(Qt::black);
+        QPainter painter(&flattened);
+        painter.drawImage(0, 0, resized);
+        painter.end();
+        return flattened;
+    }
+
+    QString describeOne(Platform platform, const QImage &image)
+    {
+        if (platform == Platform::Vita)
+        {
+            return QStringLiteral("%1 a %2x%2 palette PNG of %3 colours")
+                .arg(Icon::path(platform))
+                .arg(image.width())
+                .arg(image.colorCount());
+        }
+
+        if (platform == Platform::Switch)
+        {
+            return QStringLiteral("%1 a %2x%2 JPEG").arg(Icon::path(platform)).arg(image.width());
+        }
+
+        return QStringLiteral("%1 %2x%2 truecolor").arg(Icon::path(platform)).arg(image.width());
+    }
+
+    bool stage(QSaveFile &file, const QImage &image, const char *format, QString *error)
     {
         const QString path = QDir::toNativeSeparators(file.fileName());
         if (!QDir().mkpath(QFileInfo(file.fileName()).path()))
@@ -62,7 +146,7 @@ namespace
             return false;
         }
 
-        QImageWriter writer(&file, "png");
+        QImageWriter writer(&file, format);
         if (!writer.write(image))
         {
             *error = QStringLiteral("Could not encode %1: %2").arg(path, writer.errorString());
@@ -83,14 +167,19 @@ namespace
     }
 }
 
-QString Icon::pcPath()
+QString Icon::path(Platform platform)
 {
-    return s_pcPath;
-}
+    if (platform == Platform::Vita)
+    {
+        return s_vitaPath;
+    }
 
-QString Icon::vitaPath()
-{
-    return s_vitaPath;
+    if (platform == Platform::Switch)
+    {
+        return s_switchPath;
+    }
+
+    return s_pcPath;
 }
 
 QStringList Icon::readablePatterns()
@@ -119,85 +208,66 @@ QImage Icon::read(const QString &sourceImage, QString *error)
     return source;
 }
 
-QImage Icon::forPc(const QImage &source, QStringList *notes)
+QImage Icon::render(Platform platform, const QImage &source, QStringList *notes)
 {
     if (source.isNull())
     {
         return source;
     }
 
-    QImage pc = squared(source, notes);
-    if (pc.width() > s_largestWindowIcon)
+    if (platform == Platform::Vita)
     {
-        *notes << QStringLiteral("Reduced from %1x%1 to %2x%2.").arg(pc.width()).arg(s_largestWindowIcon);
-        pc = pc.scaled(s_largestWindowIcon, s_largestWindowIcon, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        return forVita(source, notes);
     }
-    return pc.convertToFormat(pc.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+
+    if (platform == Platform::Switch)
+    {
+        return forSwitch(source, notes);
+    }
+
+    return forPc(source, notes);
 }
 
-QImage Icon::forVita(const QImage &source, QStringList *notes)
-{
-    if (source.isNull())
-    {
-        return source;
-    }
-
-    const QImage square = squared(source, notes);
-    if (square.width() < s_vitaIconSize)
-    {
-        *notes << QStringLiteral("Enlarged from %1x%1, so it will look soft.").arg(square.width());
-    }
-    else if (square.width() > s_vitaIconSize)
-    {
-        *notes << QStringLiteral("Reduced from %1x%1.").arg(square.width());
-    }
-
-    const QImage resized = square.scaled(s_vitaIconSize, s_vitaIconSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    if (distinctColours(resized) > s_paletteColourLimit)
-    {
-        *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteColourLimit);
-    }
-
-    // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.
-    return resized.convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
-}
-
-bool Icon::write(const QString &projectDirectory, const QImage &pc, const QImage &vita, QString *error)
+bool Icon::write(const QString &projectDirectory, const QMap<Platform, QImage> &icons, QString *error)
 {
     const QDir directory(projectDirectory);
-    QSaveFile pcFile(directory.filePath(s_pcPath));
-    QSaveFile vitaFile(directory.filePath(s_vitaPath));
 
-    // Both are staged before either is committed, so a failure replaces neither.
-    if (!pc.isNull() && !stage(pcFile, pc, error))
+    // Every file is staged before any of them is committed, so a failure replaces none.
+    std::list<QSaveFile> staged;
+    for (auto icon = icons.constBegin(); icon != icons.constEnd(); ++icon)
     {
-        return false;
-    }
-    if (!vita.isNull() && !stage(vitaFile, vita, error))
-    {
-        return false;
+        if (icon.value().isNull())
+        {
+            continue;
+        }
+
+        QSaveFile &file = staged.emplace_back(directory.filePath(path(icon.key())));
+        if (!stage(file, icon.value(), formatOf(icon.key()), error))
+        {
+            return false;
+        }
     }
 
-    if (!pc.isNull() && !commit(pcFile, error))
+    for (QSaveFile &file : staged)
     {
-        return false;
+        if (!commit(file, error))
+        {
+            return false;
+        }
     }
-    return vita.isNull() || commit(vitaFile, error);
+
+    return true;
 }
 
-QString Icon::describe(const QImage &pc, const QImage &vita)
+QString Icon::describe(const QMap<Platform, QImage> &icons)
 {
     QStringList written;
-    if (!pc.isNull())
+    for (auto icon = icons.constBegin(); icon != icons.constEnd(); ++icon)
     {
-        written << QStringLiteral("%1 %2x%2 truecolor").arg(s_pcPath).arg(pc.width());
-    }
-    if (!vita.isNull())
-    {
-        written << QStringLiteral("%1 a %2x%2 palette PNG of %3 colours")
-                       .arg(s_vitaPath)
-                       .arg(vita.width())
-                       .arg(vita.colorCount());
+        if (!icon.value().isNull())
+        {
+            written << describeOne(icon.key(), icon.value());
+        }
     }
 
     if (written.isEmpty())
