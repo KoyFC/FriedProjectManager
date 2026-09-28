@@ -1,6 +1,7 @@
 import fried.Application;
 import fried.Project;
 import fried.Window;
+import fried.graphics.Color;
 import fried.graphics.Texture;
 import fried.input.Input;
 import fried.input.Key;
@@ -19,7 +20,7 @@ class Main {
 		};
 
 		var renderer = Application.createRenderer(window);
-		renderer.setDrawColor(24, 24, 32);
+		renderer.drawColor = Color.rgb(24, 24, 32);
 
 		var square = Texture.load(renderer, Assets.game("white.png"));
 
