@@ -3,6 +3,7 @@ import fried.Project;
 import fried.Window;
 import fried.graphics.Color;
 import fried.graphics.Texture;
+import fried.input.GamepadButton;
 import fried.input.Input;
 import fried.input.Key;
 import fried.io.Assets;
@@ -34,7 +35,7 @@ class Main {
 		square.addComponent(new Sprite(squareTexture));
 
 		Application.run(function() {
-			if (Input.isKeyDown(Key.Escape)) {
+			if (Input.isKeyDown(Key.Escape) || Input.isGamepadButtonDown(GamepadButton.Start)) {
 				Application.quit();
 			}
 
