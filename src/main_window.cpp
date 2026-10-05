@@ -63,6 +63,11 @@ namespace
             return QStringLiteral("switch");
         }
 
+        if (platform == Platform::Nintendo3ds)
+        {
+            return QStringLiteral("3ds");
+        }
+
         return QStringLiteral("pc");
     }
 
@@ -176,6 +181,7 @@ QWidget *MainWindow::buildPlatformRow()
     m_platform->insertItem(comboIndexOf(Platform::Pc), QStringLiteral("PC"));
     m_platform->insertItem(comboIndexOf(Platform::Vita), QStringLiteral("PlayStation Vita"));
     m_platform->insertItem(comboIndexOf(Platform::Switch), QStringLiteral("Nintendo Switch"));
+    m_platform->insertItem(comboIndexOf(Platform::Nintendo3ds), QStringLiteral("Nintendo 3DS"));
 
     QToolButton *build = new QToolButton(row);
     build->setDefaultAction(m_build);

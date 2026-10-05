@@ -19,7 +19,12 @@ namespace
             return {"VITASDK", QStringLiteral("share/vita.toolchain.cmake"), QStringLiteral("Vita")};
         }
 
-        return {"DEVKITPRO", QStringLiteral("cmake/Switch.cmake"), QStringLiteral("Switch")};
+        if (platform == Platform::Switch)
+        {
+            return {"DEVKITPRO", QStringLiteral("cmake/Switch.cmake"), QStringLiteral("Switch")};
+        }
+
+        return {"DEVKITPRO", QStringLiteral("cmake/3DS.cmake"), QStringLiteral("3DS")};
     }
 
     // Empty when the SDK is not installed or not where its variable points. Both
@@ -78,6 +83,11 @@ QString Build::defaultDirectory(Platform platform)
     if (platform == Platform::Switch)
     {
         return QStringLiteral("build/switch");
+    }
+
+    if (platform == Platform::Nintendo3ds)
+    {
+        return QStringLiteral("build/3ds");
     }
 
     return QStringLiteral("build");

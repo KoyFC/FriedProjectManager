@@ -53,6 +53,7 @@ qt_add_resources(fried_project_manager "templates"
         templates/project/.vscode/launch.json
         templates/project/.vscode/settings.json
         templates/project/.vscode/tasks.json
+        templates/project/3ds/icon.png
         templates/project/CMakeLists.txt
         templates/project/assets/icon.png
         templates/project/assets/white.png

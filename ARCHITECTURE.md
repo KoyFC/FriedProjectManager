@@ -20,7 +20,7 @@ Emptying a field removes its key rather than storing an empty string, and that c
 
 ## Platforms
 
-A platform is a `Platform` enum value, a build directory, a toolchain file and nothing else. The tool never tells the engine's CMake which platform it is building for: the toolchain file does that by setting `VITA` or `NINTENDO_SWITCH`, so the pipeline is the same three commands everywhere and adding a platform here is a case in two functions rather than a new code path.
+A platform is a `Platform` enum value, a build directory, a toolchain file and nothing else. The tool never tells the engine's CMake which platform it is building for: the toolchain file does that by setting `VITA`, `NINTENDO_SWITCH` or `NINTENDO_3DS`, so the pipeline is the same three commands everywhere and adding a platform here is a case in two functions rather than a new code path.
 
 Each SDK is found through its own environment variable (`VITASDK`, `DEVKITPRO`) and checked for the toolchain file before anything runs, so a missing SDK is one dialog rather than a build that dies halfway. Both variables are normally exported from a shell profile, which a tool launched from a desktop menu may never have inherited.
 
@@ -30,9 +30,9 @@ VitaSDK's packaging step does not quote the paths it is handed, so a space anywh
 
 ## Icons
 
-A project keeps one icon per platform because no single file can serve all three: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, and a `.nro` carries a 256x256 JPEG. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.
+A project keeps one icon per platform because no single file can serve them all: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, a `.nro` carries a 256x256 JPEG, and a `.3dsx` a 48x48 icon with no transparency. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.
 
-Each conversion reports what it had to do to the source, because silently cropping or flattening someone's artwork is worse than saying so. A source with transparency is composited onto black for the Switch rather than converted, so the result does not depend on whatever colour sat under the transparent pixels.
+Each conversion reports what it had to do to the source, because silently cropping or flattening someone's artwork is worse than saying so. A source with transparency is composited onto black for the Switch and the 3DS rather than converted, so the result does not depend on whatever colour sat under the transparent pixels.
 
 Every file is staged before any of them is committed, so a failure on the third icon leaves the first two as they were.
 

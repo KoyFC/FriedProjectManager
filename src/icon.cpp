@@ -15,9 +15,11 @@ namespace
     const QString s_pcPath = QStringLiteral("assets/icon.png");
     const QString s_vitaPath = QStringLiteral("sce_sys/icon0.png");
     const QString s_switchPath = QStringLiteral("switch/icon.jpg");
+    const QString s_nintendo3dsPath = QStringLiteral("3ds/icon.png");
 
     constexpr int s_vitaIconSize = 128;
     constexpr int s_switchIconSize = 256;
+    constexpr int s_nintendo3dsIconSize = 48;
     constexpr int s_largestWindowIcon = 512;
     constexpr int s_paletteColourLimit = 256;
 
@@ -95,22 +97,33 @@ namespace
         return resized.convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
     }
 
+    // Composited rather than converted, so a transparent pixel becomes black
+    // instead of whatever colour happened to sit underneath it.
+    QImage flattenedOntoBlack(const QImage &image, const QString &reason, QStringList *notes)
+    {
+        if (image.hasAlphaChannel())
+        {
+            *notes << QStringLiteral("Flattened onto black, since %1.").arg(reason);
+        }
+
+        QImage flattened(image.size(), QImage::Format_RGB32);
+        flattened.fill(Qt::black);
+        QPainter painter(&flattened);
+        painter.drawImage(0, 0, image);
+        painter.end();
+        return flattened;
+    }
+
     QImage forSwitch(const QImage &source, QStringList *notes)
     {
         const QImage resized = resizedTo(squared(source, notes), s_switchIconSize, notes);
-        if (resized.hasAlphaChannel())
-        {
-            *notes << QStringLiteral("Flattened onto black, since a JPEG holds no transparency.");
-        }
+        return flattenedOntoBlack(resized, QStringLiteral("a JPEG holds no transparency"), notes);
+    }
 
-        // Composited rather than converted, so a transparent pixel becomes black
-        // instead of whatever colour happened to sit underneath it.
-        QImage flattened(s_switchIconSize, s_switchIconSize, QImage::Format_RGB32);
-        flattened.fill(Qt::black);
-        QPainter painter(&flattened);
-        painter.drawImage(0, 0, resized);
-        painter.end();
-        return flattened;
+    QImage forNintendo3ds(const QImage &source, QStringList *notes)
+    {
+        const QImage resized = resizedTo(squared(source, notes), s_nintendo3dsIconSize, notes);
+        return flattenedOntoBlack(resized, QStringLiteral("the 3DS stores its icon without transparency"), notes);
     }
 
     QString describeOne(Platform platform, const QImage &image)
@@ -126,6 +139,11 @@ namespace
         if (platform == Platform::Switch)
         {
             return QStringLiteral("%1 a %2x%2 JPEG").arg(Icon::path(platform)).arg(image.width());
+        }
+
+        if (platform == Platform::Nintendo3ds)
+        {
+            return QStringLiteral("%1 a %2x%2 PNG").arg(Icon::path(platform)).arg(image.width());
         }
 
         return QStringLiteral("%1 %2x%2 truecolor").arg(Icon::path(platform)).arg(image.width());
@@ -179,6 +197,11 @@ QString Icon::path(Platform platform)
         return s_switchPath;
     }
 
+    if (platform == Platform::Nintendo3ds)
+    {
+        return s_nintendo3dsPath;
+    }
+
     return s_pcPath;
 }
 
@@ -223,6 +246,11 @@ QImage Icon::render(Platform platform, const QImage &source, QStringList *notes)
     if (platform == Platform::Switch)
     {
         return forSwitch(source, notes);
+    }
+
+    if (platform == Platform::Nintendo3ds)
+    {
+        return forNintendo3ds(source, notes);
     }
 
     return forPc(source, notes);

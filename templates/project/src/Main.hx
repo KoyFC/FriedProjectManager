@@ -25,7 +25,7 @@ class Main {
 		var renderer = Application.createRenderer(window);
 		renderer.drawColor = Color.rgb(24, 24, 32);
 
-		var squareTexture = Texture.load(renderer, Assets.game("white.png"));
+		var squareTexture = Texture.from(renderer, Assets.game("white.png"));
 
 		var scene = new Scene("Main");
 
@@ -39,12 +39,11 @@ class Main {
 			}
 
 			scene.update();
-			scene.draw();
+			scene.draw(renderer);
 		});
 
 		scene.destroy();
-		squareTexture.destroy();
-		Application.destroyRenderer();
+		Application.destroyRenderer(renderer);
 		window.destroy();
 		Application.shutdown();
 	}
