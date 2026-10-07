@@ -5,11 +5,29 @@
 	"window": {
 		"title": "@NAME@"
 	},
-	"display": {
-		"mode": "default",
-		"filter": "nearest"
+	"pc": {
+		"display": {
+			"mode": "default",
+			"filter": "nearest"
+		}
 	},
 	"vita": {
-		"titleId": "@TITLE_ID@"
+		"titleId": "@TITLE_ID@",
+		"display": {
+			"mode": "default",
+			"filter": "nearest"
+		}
+	},
+	"switch": {
+		"display": {
+			"mode": "default",
+			"filter": "nearest"
+		}
+	},
+	"3ds": {
+		"display": {
+			"mode": "default",
+			"filter": "nearest"
+		}
 	}
 }
