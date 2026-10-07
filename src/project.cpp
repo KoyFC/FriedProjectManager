@@ -11,6 +11,7 @@
 namespace
 {
     const QString s_fileName = QStringLiteral("project.fried");
+    const QString s_displayKey = QStringLiteral("display");
 
     QString nested(const QJsonObject &root, const QString &key, const QString &subKey)
     {
@@ -47,6 +48,30 @@ namespace
         QJsonObject child = root.value(key).toObject();
         assign(child, subKey, value);
         assign(root, key, child);
+    }
+
+    // Each key a platform leaves out is the shared one, as the engine reads it.
+    DisplaySettings displayFrom(const QJsonObject &object, const DisplaySettings &fallback)
+    {
+        return {
+            object.value(QStringLiteral("mode")).toString(fallback.m_mode),
+            object.value(QStringLiteral("width")).toInt(fallback.m_width),
+            object.value(QStringLiteral("height")).toInt(fallback.m_height),
+            object.value(QStringLiteral("filter")).toString(fallback.m_filter),
+        };
+    }
+
+    QJsonObject displayObject(const DisplaySettings &display)
+    {
+        QJsonObject object;
+        object.insert(QStringLiteral("mode"), display.m_mode);
+        if (display.m_mode != QStringLiteral("default"))
+        {
+            object.insert(QStringLiteral("width"), display.m_width);
+            object.insert(QStringLiteral("height"), display.m_height);
+        }
+        object.insert(QStringLiteral("filter"), display.m_filter);
+        return object;
     }
 
     // Qt indents with four spaces; these files use tabs.
@@ -147,6 +172,21 @@ QString Project::vitaTitleId() const
     return nested(m_root, QStringLiteral("vita"), QStringLiteral("titleId"));
 }
 
+DisplaySettings Project::display() const
+{
+    return displayFrom(m_root.value(s_displayKey).toObject(), DisplaySettings());
+}
+
+std::optional<DisplaySettings> Project::display(Platform platform) const
+{
+    const QJsonValue own = m_root.value(platformKey(platform)).toObject().value(s_displayKey);
+    if (!own.isObject())
+    {
+        return std::nullopt;
+    }
+    return displayFrom(own.toObject(), display());
+}
+
 bool Project::save(QString *error) const
 {
     QSaveFile file(filePath());
@@ -231,4 +271,37 @@ void Project::setWindowTitle(const QString &value)
 void Project::setVitaTitleId(const QString &value)
 {
     assignNested(m_root, QStringLiteral("vita"), QStringLiteral("titleId"), value);
+}
+
+// Left untouched when unchanged, so a display written by hand keeps its shape.
+void Project::setDisplay(const DisplaySettings &value)
+{
+    if (value != display())
+    {
+        m_root.insert(s_displayKey, displayObject(value));
+    }
+}
+
+void Project::setDisplay(Platform platform, const std::optional<DisplaySettings> &value)
+{
+    if (value == display(platform))
+    {
+        return;
+    }
+
+    QJsonObject section = m_root.value(platformKey(platform)).toObject();
+    assign(section, s_displayKey, value ? displayObject(*value) : QJsonObject());
+    assign(m_root, platformKey(platform), section);
+}
+
+// The size of a native display is never written, so it cannot make two differ.
+bool DisplaySettings::operator==(const DisplaySettings &other) const
+{
+    const bool sameSize = m_mode == QStringLiteral("default") || (m_width == other.m_width && m_height == other.m_height);
+    return m_mode == other.m_mode && sameSize && m_filter == other.m_filter;
+}
+
+bool DisplaySettings::operator!=(const DisplaySettings &other) const
+{
+    return !(*this == other);
 }

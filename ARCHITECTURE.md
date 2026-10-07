@@ -16,6 +16,8 @@ The tool reads and rewrites a file the engine also reads, so it keeps the parsed
 
 Emptying a field removes its key rather than storing an empty string, and that cascades: clearing `vita.titleId` removes the `vita` object with it, since the engine reads an absent key as undeclared.
 
+`display` is edited as the engine reads it: one shared object, and an override under each platform's own section, `pc`, `vita`, `switch` or `3ds`, which are the same names `platformKey()` gives the remembered build settings. The engine merges an override key by key, but the form shows a platform as either shared or wholly its own, so an override is written with every key and starts as a copy of the shared display. A display the form did not change is not rewritten, so one written by hand with fewer keys keeps its shape. The size is written only for a mode that scales, which is also why two native displays compare equal whatever size the form holds for them.
+
 `version` is validated as `NN.NN` because that is the shape a Vita package requires. The Switch's NACP takes any string, so the stricter rule wins and one field serves both.
 
 ## Platforms

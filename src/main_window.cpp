@@ -24,6 +24,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QSettings>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QToolButton>
@@ -36,6 +37,7 @@ namespace
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
 
     constexpr int s_iconPreviewSize = 32;
+    constexpr int s_maxDisplaySide = 4096;
 
     // Stands for the project's own directory, so the field is one editable path
     // whichever side of the project it points at.
@@ -51,31 +53,11 @@ namespace
         return static_cast<int>(type);
     }
 
-    QString settingsName(Platform platform)
-    {
-        if (platform == Platform::Vita)
-        {
-            return QStringLiteral("vita");
-        }
-
-        if (platform == Platform::Switch)
-        {
-            return QStringLiteral("switch");
-        }
-
-        if (platform == Platform::Nintendo3ds)
-        {
-            return QStringLiteral("3ds");
-        }
-
-        return QStringLiteral("pc");
-    }
-
     // A project path holds separators, so it is percent encoded to stay one key.
     QString rememberedKey(const QString &setting, const QString &project, Platform platform)
     {
         return QStringLiteral("%1/%2/%3")
-            .arg(setting, settingsName(platform), QString::fromUtf8(QUrl::toPercentEncoding(project)));
+            .arg(setting, platformKey(platform), QString::fromUtf8(QUrl::toPercentEncoding(project)));
     }
 
     QString buildDirectoryKey(const QString &project, Platform platform)
@@ -166,6 +148,11 @@ void MainWindow::buildForm()
     m_version = addField(QStringLiteral("Version"));
     m_windowTitle = addField(QStringLiteral("Window title"));
     m_vitaTitleId = addField(QStringLiteral("Vita title ID"));
+    m_fields->addRow(QStringLiteral("Display"), buildDisplayRow());
+
+    m_ownDisplay = new QCheckBox(m_form);
+    m_fields->addRow(QString(), m_ownDisplay);
+    connect(m_ownDisplay, &QCheckBox::toggled, this, &MainWindow::ownDisplayToggled);
 
     showPlatformFields();
 
@@ -256,6 +243,60 @@ QWidget *MainWindow::buildDirectoryRow()
     connect(m_buildReset, &QPushButton::clicked, this, &MainWindow::resetBuildDirectory);
     connect(m_buildDirectory, &QLineEdit::editingFinished, this, &MainWindow::rememberBuildDirectory);
     connect(m_buildDirectory, &QLineEdit::textChanged, this, &MainWindow::buildDirectoryChanged);
+    return row;
+}
+
+QWidget *MainWindow::buildDisplayRow()
+{
+    QWidget *row = new QWidget(m_form);
+    QHBoxLayout *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    m_displayMode = new QComboBox(row);
+    const QList<std::array<QString, 3>> modes = {
+        {QStringLiteral("Native resolution"), QStringLiteral("default"),
+         QStringLiteral("Draws at the screen's own resolution, unscaled. The game adapts to whatever size it gets.")},
+        {QStringLiteral("Fit"), QStringLiteral("fit"),
+         QStringLiteral("Scales the game's size as large as the screen allows, keeping its shape, with black bars.")},
+        {QStringLiteral("Integer scale"), QStringLiteral("integer"),
+         QStringLiteral("Like Fit, but only by whole multiples, so every pixel stays the same size.")},
+        {QStringLiteral("Expand"), QStringLiteral("expand"),
+         QStringLiteral("Like Fit, but the game sees more on the longer side instead of black bars.")},
+        {QStringLiteral("Stretch"), QStringLiteral("stretch"),
+         QStringLiteral("Fills the screen with the game's size, distorting its shape.")},
+    };
+    for (const auto &[label, mode, description] : modes)
+    {
+        m_displayMode->addItem(label, mode);
+        m_displayMode->setItemData(m_displayMode->count() - 1, description, Qt::ToolTipRole);
+    }
+
+    m_displayWidth = new QSpinBox(row);
+    m_displayWidth->setRange(1, s_maxDisplaySide);
+    m_displayWidth->setToolTip(QStringLiteral("The width the game is designed for."));
+    m_displayHeight = new QSpinBox(row);
+    m_displayHeight->setRange(1, s_maxDisplaySide);
+    m_displayHeight->setToolTip(QStringLiteral("The height the game is designed for."));
+
+    m_displayFilter = new QComboBox(row);
+    m_displayFilter->addItem(QStringLiteral("Nearest"), QStringLiteral("nearest"));
+    m_displayFilter->setItemData(0, QStringLiteral("Keeps pixels sharp when scaled, which is what pixel art wants."),
+                                 Qt::ToolTipRole);
+    m_displayFilter->addItem(QStringLiteral("Linear"), QStringLiteral("linear"));
+    m_displayFilter->setItemData(1, QStringLiteral("Blends pixels when scaled, which suits art drawn at a high resolution."),
+                                 Qt::ToolTipRole);
+
+    layout->addWidget(m_displayMode);
+    layout->addWidget(m_displayWidth);
+    layout->addWidget(new QLabel(QStringLiteral("x"), row));
+    layout->addWidget(m_displayHeight);
+    layout->addWidget(m_displayFilter);
+    layout->addStretch();
+
+    connect(m_displayMode, &QComboBox::currentIndexChanged, this, &MainWindow::displayEdited);
+    connect(m_displayWidth, &QSpinBox::valueChanged, this, &MainWindow::displayEdited);
+    connect(m_displayHeight, &QSpinBox::valueChanged, this, &MainWindow::displayEdited);
+    connect(m_displayFilter, &QComboBox::currentIndexChanged, this, &MainWindow::displayEdited);
     return row;
 }
 
@@ -457,6 +498,7 @@ void MainWindow::showPlatformFields()
 {
     const bool vita = selectedPlatform() == Platform::Vita;
     m_fields->setRowVisible(m_vitaTitleId, vita);
+    showDisplay();
 
     if (!m_project.directory().isEmpty())
     {
@@ -466,6 +508,82 @@ void MainWindow::showPlatformFields()
     }
 
     buildDirectoryChanged();
+}
+
+void MainWindow::showDisplay()
+{
+    const std::optional<DisplaySettings> &own = platformDisplay();
+    const DisplaySettings shown = own ? *own : m_sharedDisplay;
+
+    m_isShowingDisplay = true;
+    m_ownDisplay->setText(QStringLiteral("Different on %1").arg(m_platform->currentText()));
+    m_ownDisplay->setChecked(own.has_value());
+    m_displayMode->setCurrentIndex(std::max(0, m_displayMode->findData(shown.m_mode)));
+    m_displayWidth->setValue(shown.m_width);
+    m_displayHeight->setValue(shown.m_height);
+    m_displayFilter->setCurrentIndex(std::max(0, m_displayFilter->findData(shown.m_filter)));
+    m_isShowingDisplay = false;
+
+    const bool isScaled = shown.m_mode != QStringLiteral("default");
+    m_displayWidth->setEnabled(isScaled);
+    m_displayHeight->setEnabled(isScaled);
+}
+
+void MainWindow::displayEdited()
+{
+    if (m_isShowingDisplay)
+    {
+        return;
+    }
+
+    std::optional<DisplaySettings> &own = platformDisplay();
+    (own ? *own : m_sharedDisplay) = displayInForm();
+    showDisplay();
+}
+
+// A platform's own display starts as a copy of the shared one.
+void MainWindow::ownDisplayToggled(bool isOwn)
+{
+    if (m_isShowingDisplay)
+    {
+        return;
+    }
+
+    std::optional<DisplaySettings> &own = platformDisplay();
+    own = isOwn ? std::optional<DisplaySettings>(m_sharedDisplay) : std::nullopt;
+    showDisplay();
+}
+
+DisplaySettings MainWindow::displayInForm() const
+{
+    return {
+        m_displayMode->currentData().toString(),
+        m_displayWidth->value(),
+        m_displayHeight->value(),
+        m_displayFilter->currentData().toString(),
+    };
+}
+
+std::optional<DisplaySettings> &MainWindow::platformDisplay()
+{
+    return m_platformDisplays[comboIndexOf(selectedPlatform())];
+}
+
+bool MainWindow::hasUnsavedDisplay() const
+{
+    if (m_sharedDisplay != m_project.display())
+    {
+        return true;
+    }
+
+    for (int index = 0; index < s_platformCount; ++index)
+    {
+        if (m_platformDisplays[index] != m_project.display(static_cast<Platform>(index)))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 Platform MainWindow::selectedPlatform() const
@@ -580,6 +698,13 @@ void MainWindow::showProject()
     m_windowTitle->setText(m_project.windowTitle());
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
+    m_sharedDisplay = m_project.display();
+    for (int index = 0; index < s_platformCount; ++index)
+    {
+        m_platformDisplays[index] = m_project.display(static_cast<Platform>(index));
+    }
+    showDisplay();
+
     showIcon();
     showBuildType();
     showBuildDirectory();
@@ -598,7 +723,8 @@ bool MainWindow::hasUnsavedEdits() const
            || m_organization->text() != m_project.organization()
            || m_version->text() != m_project.version()
            || m_windowTitle->text() != m_project.windowTitle()
-           || m_vitaTitleId->text() != m_project.vitaTitleId();
+           || m_vitaTitleId->text() != m_project.vitaTitleId()
+           || hasUnsavedDisplay();
 }
 
 // The build reads project.fried, not the form.
@@ -696,6 +822,11 @@ bool MainWindow::saveProject()
     m_project.setVersion(m_version->text());
     m_project.setWindowTitle(m_windowTitle->text());
     m_project.setVitaTitleId(m_vitaTitleId->text());
+    m_project.setDisplay(m_sharedDisplay);
+    for (int index = 0; index < s_platformCount; ++index)
+    {
+        m_project.setDisplay(static_cast<Platform>(index), m_platformDisplays[index]);
+    }
 
     QString error;
     if (!m_project.save(&error))

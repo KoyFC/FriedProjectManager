@@ -5,14 +5,19 @@
 
 #include <QMainWindow>
 
+#include <array>
+#include <optional>
+
 class HomePage;
 
 class QAction;
+class QCheckBox;
 class QComboBox;
 class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QSpinBox;
 class QStackedWidget;
 class QWidget;
 
@@ -34,6 +39,7 @@ private:
     QWidget *buildIconRow();
     QWidget *buildTypeRow();
     QWidget *buildDirectoryRow();
+    QWidget *buildDisplayRow();
     QLineEdit *addField(const QString &label);
 
     void newProject();
@@ -61,6 +67,12 @@ private:
     QString nearbyLocation() const;
     void showProject();
     void showPlatformFields();
+    void showDisplay();
+    void displayEdited();
+    void ownDisplayToggled(bool isOwn);
+    DisplaySettings displayInForm() const;
+    std::optional<DisplaySettings> &platformDisplay();
+    bool hasUnsavedDisplay() const;
     QString firstProblem(QLineEdit **field) const;
 
     Project m_project;
@@ -83,4 +95,14 @@ private:
     QLineEdit *m_version = nullptr;
     QLineEdit *m_windowTitle = nullptr;
     QLineEdit *m_vitaTitleId = nullptr;
+    QComboBox *m_displayMode = nullptr;
+    QSpinBox *m_displayWidth = nullptr;
+    QSpinBox *m_displayHeight = nullptr;
+    QComboBox *m_displayFilter = nullptr;
+    QCheckBox *m_ownDisplay = nullptr;
+
+    // The form's edits to every platform's display, until they are saved.
+    DisplaySettings m_sharedDisplay;
+    std::array<std::optional<DisplaySettings>, s_platformCount> m_platformDisplays;
+    bool m_isShowingDisplay = false;
 };
