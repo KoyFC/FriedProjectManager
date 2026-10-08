@@ -4,6 +4,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFont>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -47,9 +48,15 @@ ImageFileEditor::ImageFileEditor(QWidget *parent, const QString &title, const QS
     m_revert->setEnabled(false);
     connect(m_revert, &QPushButton::clicked, this, &ImageFileEditor::revert);
 
+    m_remove = new QPushButton(QStringLiteral("Remove"), this);
+    m_remove->setToolTip(QStringLiteral("Go without this image."));
+    m_remove->hide();
+    connect(m_remove, &QPushButton::clicked, this, &ImageFileEditor::remove);
+
     QHBoxLayout *buttons = new QHBoxLayout;
     buttons->addWidget(choose);
     buttons->addWidget(m_revert);
+    buttons->addWidget(m_remove);
     buttons->addStretch();
 
     m_notes = helpLabel(QString(), this);
@@ -66,6 +73,12 @@ ImageFileEditor::ImageFileEditor(QWidget *parent, const QString &title, const QS
     layout->addStretch();
 }
 
+void ImageFileEditor::setOptional(const QString &missingNote)
+{
+    m_missingNote = missingNote;
+    m_remove->show();
+}
+
 void ImageFileEditor::setProjectDirectory(const QString &directory)
 {
     m_directory = directory;
@@ -74,12 +87,17 @@ void ImageFileEditor::setProjectDirectory(const QString &directory)
 
 bool ImageFileEditor::hasPending() const
 {
-    return !m_pending.isNull();
+    return !m_pending.isNull() || m_isRemoving;
 }
 
 ImageConversion::File ImageFileEditor::pending() const
 {
     return {m_path, m_pending};
+}
+
+QString ImageFileEditor::pendingRemoval() const
+{
+    return m_isRemoving ? m_path : QString();
 }
 
 void ImageFileEditor::pendingWritten()
@@ -89,9 +107,11 @@ void ImageFileEditor::pendingWritten()
         return;
     }
 
+    m_notes->setText(m_isRemoving ? m_missingNote : QStringLiteral("Written."));
+    m_remove->setEnabled(!m_isRemoving);
     m_pending = QImage();
+    m_isRemoving = false;
     m_revert->setEnabled(false);
-    m_notes->setText(QStringLiteral("Written."));
 }
 
 void ImageFileEditor::choose()
@@ -114,11 +134,26 @@ void ImageFileEditor::choose()
 
     QStringList notes;
     m_pending = m_render(source, &notes);
+    m_isRemoving = false;
     showImage(m_pending);
 
     notes.prepend(QStringLiteral("Written on Save."));
     m_notes->setText(notes.join(QChar(' ')));
     m_revert->setEnabled(true);
+    m_remove->setEnabled(true);
+    emit changed();
+}
+
+void ImageFileEditor::remove()
+{
+    const bool exists = QFileInfo::exists(QDir(m_directory).filePath(m_path));
+    m_pending = QImage();
+    m_isRemoving = exists;
+    showImage(QImage());
+
+    m_notes->setText(exists ? QStringLiteral("Removed on Save. %1").arg(m_missingNote) : m_missingNote);
+    m_revert->setEnabled(exists);
+    m_remove->setEnabled(false);
     emit changed();
 }
 
@@ -126,14 +161,17 @@ void ImageFileEditor::revert()
 {
     const bool hadPending = hasPending();
     m_pending = QImage();
+    m_isRemoving = false;
     m_revert->setEnabled(false);
     m_notes->clear();
 
     const QImage existing(QDir(m_directory).filePath(m_path));
+    m_remove->setEnabled(!existing.isNull());
     showImage(existing);
     if (existing.isNull())
     {
-        m_notes->setText(QStringLiteral("This project has no %1 yet.").arg(m_path));
+        m_notes->setText(m_missingNote.isEmpty() ? QStringLiteral("This project has no %1 yet.").arg(m_path)
+                                                 : m_missingNote);
     }
     else if (existing.size() != m_size || existing.format() != QImage::Format_Indexed8)
     {

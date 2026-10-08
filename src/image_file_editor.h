@@ -22,13 +22,20 @@ public:
     ImageFileEditor(QWidget *parent, const QString &title, const QString &description, const QString &path,
                     const QSize &size, Render render);
 
-    // Shows what the project holds and forgets any image waiting to be written.
+    // A file the project may go without, which can then be removed. The note says
+    // what having none means.
+    void setOptional(const QString &missingNote);
+
+    // Shows what the project holds and forgets any change waiting to be written.
     void setProjectDirectory(const QString &directory);
 
     bool hasPending() const;
     ImageConversion::File pending() const;
 
-    // The waiting image is now what the project holds.
+    // The path to remove on Save, or empty.
+    QString pendingRemoval() const;
+
+    // The waiting change is now what the project holds.
     void pendingWritten();
 
 signals:
@@ -37,6 +44,7 @@ signals:
 private:
     void choose();
     void revert();
+    void remove();
     void fix(const QImage &existing);
     void showImage(const QImage &image);
 
@@ -45,8 +53,11 @@ private:
     QSize m_size;
     Render m_render;
     QImage m_pending;
+    bool m_isRemoving = false;
+    QString m_missingNote;
 
     QLabel *m_preview = nullptr;
     QLabel *m_notes = nullptr;
     QPushButton *m_revert = nullptr;
+    QPushButton *m_remove = nullptr;
 };

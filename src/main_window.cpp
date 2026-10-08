@@ -8,6 +8,7 @@
 #include "home_page.h"
 #include "icon.h"
 #include "icon_dialog.h"
+#include "image_conversion.h"
 #include "image_file_editor.h"
 #include "live_area.h"
 #include "live_area_template_editor.h"
@@ -18,6 +19,7 @@
 
 #include <QCheckBox>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFont>
 #include <QFormLayout>
@@ -54,6 +56,9 @@ namespace
     constexpr int s_sectionPadding = 4;
     constexpr int s_iconPreviewSize = 96;
     constexpr int s_iconColumnWidth = 140;
+
+    const QString s_bootScreenPath = QStringLiteral("sce_sys/pic0.png");
+    const QSize s_bootScreenSize(960, 544);
 
     // Every platform in the order the sidebar and the icons page list them.
     const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds};
@@ -420,6 +425,7 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     if (platform == Platform::Vita)
     {
         content->addWidget(buildLiveArea(parent));
+        content->addWidget(buildBootScreen(parent));
     }
 
     content->addWidget(buildPlatformDisplay(platform, parent));
@@ -452,6 +458,27 @@ QWidget *MainWindow::buildLiveArea(QWidget *parent)
     layout->addLayout(images);
     layout->addSpacing(layout->spacing());
     layout->addWidget(m_liveAreaTemplate);
+    return group;
+}
+
+QWidget *MainWindow::buildBootScreen(QWidget *parent)
+{
+    QGroupBox *group = new QGroupBox(QStringLiteral("Boot Screen"), parent);
+
+    ImageFileEditor *editor = new ImageFileEditor(
+        group, QStringLiteral("Splash"),
+        QStringLiteral("Shown full screen by the console while the game starts, until it draws its first frame."),
+        s_bootScreenPath, s_bootScreenSize, [](const QImage &source, QStringList *notes) {
+            const QImage shaped = ImageConversion::cropped(source, s_bootScreenSize, notes);
+            return ImageConversion::palette(ImageConversion::resized(shaped, s_bootScreenSize, notes), notes);
+        });
+    editor->setOptional(QStringLiteral("Without one, the console shows no image of the game while it starts."));
+    connect(editor, &ImageFileEditor::changed, this, &MainWindow::showUnsavedState);
+    m_imageEditors << editor;
+
+    QHBoxLayout *layout = new QHBoxLayout(group);
+    layout->addWidget(editor);
+    layout->addStretch();
     return group;
 }
 
@@ -801,8 +828,17 @@ bool MainWindow::writeFiles()
         return false;
     }
 
+    const QDir directory(m_project.directory());
     for (ImageFileEditor *editor : std::as_const(m_imageEditors))
     {
+        const QString removed = editor->pendingRemoval();
+        if (!removed.isEmpty() && !QFile::remove(directory.filePath(removed)))
+        {
+            QMessageBox::warning(this, QStringLiteral("Save"),
+                                 QStringLiteral("Could not remove %1.")
+                                     .arg(QDir::toNativeSeparators(directory.filePath(removed))));
+            return false;
+        }
         editor->pendingWritten();
     }
 

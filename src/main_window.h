@@ -51,6 +51,7 @@ private:
     QWidget *buildPlatformPage(Platform platform);
     QWidget *buildPlatformDisplay(Platform platform, QWidget *parent);
     QWidget *buildLiveArea(QWidget *parent);
+    QWidget *buildBootScreen(QWidget *parent);
     QWidget *newPage(const QString &title, const QString &description, QVBoxLayout **content);
     QListWidget *newSectionList(QWidget *parent);
     void addSection(QListWidget *list, const QString &name, QWidget *page);

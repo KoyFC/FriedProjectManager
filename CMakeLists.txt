@@ -77,6 +77,7 @@ qt_add_resources(fried_project_manager "templates"
         templates/project/build.hxml
         templates/project/project.fried
         templates/project/sce_sys/icon0.png
+        templates/project/sce_sys/pic0.png
         templates/project/sce_sys/livearea/contents/bg.png
         templates/project/sce_sys/livearea/contents/startup.png
         templates/project/sce_sys/livearea/contents/template.xml
