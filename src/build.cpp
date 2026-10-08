@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 namespace
 {
@@ -54,6 +55,30 @@ namespace
         return file;
     }
 
+    // The fxSDK exports no variable of its own. It installs the fxsdk command into
+    // <prefix>/bin and its CMake files under <prefix>/lib, so the command on the
+    // PATH is what leads to the toolchain.
+    QString fxsdkToolchainFile(QString *error)
+    {
+        const QString fxsdk = QStandardPaths::findExecutable(QStringLiteral("fxsdk"));
+        if (fxsdk.isEmpty())
+        {
+            *error = QStringLiteral("fxsdk is not on the PATH, so there is no fx-CG50 toolchain to build with.");
+            return {};
+        }
+
+        const QString file =
+            QDir::cleanPath(QFileInfo(fxsdk).absoluteDir().filePath(QStringLiteral("../lib/cmake/fxsdk/FXCG50.cmake")));
+        if (!QFileInfo::exists(file))
+        {
+            *error = QStringLiteral("%1 has no fx-CG50 toolchain at %2.")
+                         .arg(QDir::toNativeSeparators(fxsdk), QDir::toNativeSeparators(file));
+            return {};
+        }
+
+        return file;
+    }
+
     QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras)
     {
         const QString typeName = Build::name(type);
@@ -90,6 +115,11 @@ QString Build::defaultDirectory(Platform platform)
         return QStringLiteral("build/3ds");
     }
 
+    if (platform == Platform::Cg50)
+    {
+        return QStringLiteral("build/cg50");
+    }
+
     return QStringLiteral("build");
 }
 
@@ -116,7 +146,7 @@ QList<QStringList> Build::commands(Platform platform, Type type, const QString &
         return pipeline(buildDirectory, type, {});
     }
 
-    const QString toolchain = consoleToolchainFile(platform, error);
+    const QString toolchain = platform == Platform::Cg50 ? fxsdkToolchainFile(error) : consoleToolchainFile(platform, error);
     if (toolchain.isEmpty())
     {
         return {};

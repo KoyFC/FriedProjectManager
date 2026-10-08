@@ -73,6 +73,8 @@ qt_add_resources(fried_project_manager "templates"
         templates/project/3ds/icon.png
         templates/project/CMakeLists.txt
         templates/project/assets/icon.png
+        templates/project/cg50/icon-sel.png
+        templates/project/cg50/icon-uns.png
         templates/project/assets/white.png
         templates/project/build.hxml
         templates/project/project.fried

@@ -61,7 +61,7 @@ namespace
     const QSize s_bootScreenSize(960, 544);
 
     // Every platform in the order the sidebar and the icons page list them.
-    const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds};
+    const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds, Platform::Cg50};
 
     int indexOf(Platform platform)
     {
@@ -403,6 +403,11 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     case Platform::Nintendo3ds:
         description = QStringLiteral("A 3DS .3dsx is labelled with the name, organization and version on the "
                                      "General page.");
+        break;
+    case Platform::Cg50:
+        description = QStringLiteral("An fx-CG50 .g3a is labelled with the name on the General page. Its assets go "
+                                     "beside it, in a folder of that name the build writes next to it, and both "
+                                     "are copied to the root of the calculator's storage.");
         break;
     default:
         description = QStringLiteral("The game as a desktop executable.");

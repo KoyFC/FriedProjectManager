@@ -23,7 +23,7 @@ namespace
 
     // Left to right, with the window icon first because it is the one the others
     // can be derived from.
-    const QList<Platform> s_panels = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds};
+    const QList<Platform> s_panels = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds, Platform::Cg50};
 
     QPixmap previewOf(const QImage &image)
     {
@@ -48,6 +48,11 @@ namespace
         if (platform == Platform::Nintendo3ds)
         {
             return QStringLiteral("3DS icon");
+        }
+
+        if (platform == Platform::Cg50)
+        {
+            return QStringLiteral("fx-CG50 icon");
         }
 
         return QStringLiteral("Window icon");

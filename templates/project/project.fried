@@ -29,5 +29,11 @@
 			"mode": "default",
 			"filter": "nearest"
 		}
+	},
+	"cg50": {
+		"display": {
+			"mode": "default",
+			"filter": "nearest"
+		}
 	}
 }
