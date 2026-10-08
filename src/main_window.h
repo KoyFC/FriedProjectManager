@@ -12,6 +12,7 @@ class BuildBar;
 class DisplayEditor;
 class HomePage;
 class ImageFileEditor;
+class LiveAreaTemplateEditor;
 
 class QAction;
 class QCheckBox;
@@ -74,8 +75,8 @@ private:
     void platformDisplayEdited(Platform platform);
     void ownDisplayToggled(Platform platform, bool isOwn);
     bool hasUnsavedDisplay() const;
-    bool hasUnsavedImages() const;
-    bool writeImages();
+    bool hasUnsavedFiles() const;
+    bool writeFiles();
     QString firstProblem(QLineEdit **field) const;
 
     Project m_project;
@@ -103,6 +104,7 @@ private:
     QLabel *m_displayOverrides = nullptr;
     std::array<PlatformDisplay, s_platformCount> m_platformDisplayEditors = {};
     QList<ImageFileEditor *> m_imageEditors;
+    LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;
 
     // The form's edits to every platform's display, until they are saved.
     DisplaySettings m_sharedDisplay;

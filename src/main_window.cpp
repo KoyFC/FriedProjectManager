@@ -10,6 +10,7 @@
 #include "icon_dialog.h"
 #include "image_file_editor.h"
 #include "live_area.h"
+#include "live_area_template_editor.h"
 #include "new_project_dialog.h"
 #include "page_scroll_area.h"
 #include "project_template.h"
@@ -37,6 +38,8 @@
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QStyle>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <tuple>
@@ -157,7 +160,18 @@ QWidget *MainWindow::buildProjectView()
     m_saveButton->setToolTip(QStringLiteral("Write the form to project.fried."));
     connect(m_saveButton, &QPushButton::clicked, this, &MainWindow::saveProject);
 
+    // The way back to the project list, without a trip to the File menu.
+    QToolButton *back = new QToolButton(view);
+    back->setText(QStringLiteral("Projects"));
+    back->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
+    back->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    back->setAutoRaise(true);
+    back->setToolTip(QStringLiteral("Back to the project list (%1)")
+                         .arg(m_close->shortcut().toString(QKeySequence::NativeText)));
+    connect(back, &QToolButton::clicked, this, &MainWindow::showHome);
+
     QVBoxLayout *sidebar = new QVBoxLayout;
+    sidebar->addWidget(back, 0, Qt::AlignLeft);
     sidebar->addWidget(panel, 1);
     sidebar->addWidget(m_saveButton);
 
@@ -209,9 +223,11 @@ QListWidget *MainWindow::newSectionList(QWidget *parent)
     list->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     list->setStyleSheet(QStringLiteral("QListWidget::item { padding: %1px; }").arg(s_sectionPadding));
 
-    // Only one row is current across every list, as if they were one.
-    connect(list, &QListWidget::currentItemChanged, this, [this, list](QListWidgetItem *current) {
-        if (!current)
+    // Only one row is selected across every list, as if they were one. Each list
+    // keeps its current row, since a list without one takes its first on focus.
+    connect(list, &QListWidget::itemSelectionChanged, this, [this, list] {
+        const QList<QListWidgetItem *> selected = list->selectedItems();
+        if (selected.isEmpty())
         {
             return;
         }
@@ -221,10 +237,11 @@ QListWidget *MainWindow::newSectionList(QWidget *parent)
             if (other != list)
             {
                 const QSignalBlocker blocker(other);
-                other->setCurrentItem(nullptr);
+                other->clearSelection();
+                other->viewport()->update();
             }
         }
-        m_sections->setCurrentIndex(current->data(s_sectionRole).toInt());
+        m_sections->setCurrentIndex(selected.first()->data(s_sectionRole).toInt());
     });
 
     m_sectionLists << list;
@@ -425,11 +442,16 @@ QWidget *MainWindow::buildLiveArea(QWidget *parent)
     }
     images->addStretch();
 
+    m_liveAreaTemplate = new LiveAreaTemplateEditor(group);
+    connect(m_liveAreaTemplate, &LiveAreaTemplateEditor::changed, this, &MainWindow::showUnsavedState);
+
     QVBoxLayout *layout = new QVBoxLayout(group);
     layout->addWidget(helpLabel(QStringLiteral("The game's page on the Vita's home screen. Images are cut to shape, "
                                                "resized and reduced to 256 colours, which is what the console reads."),
                                 group));
     layout->addLayout(images);
+    layout->addSpacing(layout->spacing());
+    layout->addWidget(m_liveAreaTemplate);
     return group;
 }
 
@@ -722,6 +744,7 @@ void MainWindow::showProject()
     {
         editor->setProjectDirectory(m_project.directory());
     }
+    m_liveAreaTemplate->setProjectDirectory(m_project.directory());
     m_buildBar->setProjectDirectory(m_project.directory());
 
     m_pages->setCurrentWidget(m_projectView);
@@ -742,11 +765,16 @@ bool MainWindow::hasUnsavedEdits() const
            || m_windowTitle->text() != m_project.windowTitle()
            || m_vitaTitleId->text() != m_project.vitaTitleId()
            || hasUnsavedDisplay()
-           || hasUnsavedImages();
+           || hasUnsavedFiles();
 }
 
-bool MainWindow::hasUnsavedImages() const
+bool MainWindow::hasUnsavedFiles() const
 {
+    if (m_liveAreaTemplate->hasPending())
+    {
+        return true;
+    }
+
     for (const ImageFileEditor *editor : m_imageEditors)
     {
         if (editor->hasPending())
@@ -758,7 +786,7 @@ bool MainWindow::hasUnsavedImages() const
 }
 
 // Written first, so a failure to write them leaves project.fried as it was.
-bool MainWindow::writeImages()
+bool MainWindow::writeFiles()
 {
     QList<ImageConversion::File> files;
     for (const ImageFileEditor *editor : std::as_const(m_imageEditors))
@@ -776,6 +804,12 @@ bool MainWindow::writeImages()
     for (ImageFileEditor *editor : std::as_const(m_imageEditors))
     {
         editor->pendingWritten();
+    }
+
+    if (!m_liveAreaTemplate->writePending(&error))
+    {
+        QMessageBox::warning(this, QStringLiteral("Save"), error);
+        return false;
     }
     return true;
 }
@@ -877,7 +911,7 @@ bool MainWindow::saveProject()
         return false;
     }
 
-    if (!writeImages())
+    if (!writeFiles())
     {
         return false;
     }

@@ -35,6 +35,10 @@ qt_add_executable(fried_project_manager
     src/image_file_editor.cpp
     src/live_area.h
     src/live_area.cpp
+    src/live_area_template.h
+    src/live_area_template.cpp
+    src/live_area_template_editor.h
+    src/live_area_template_editor.cpp
     src/main.cpp
     src/main_window.h
     src/main_window.cpp

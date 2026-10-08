@@ -32,7 +32,7 @@ cmake --build build
   ```
 
   `.vscode/` is the engine repository's configuration retargeted at the game. The art in `assets/`, `sce_sys/`, `switch/` and `3ds/` is flat white placeholder to replace.
-- **An open project** is a sidebar of pages: **General** for the game's identity, **Display**, **Icons**, and one page per platform with what only that platform declares. The build controls stay at the bottom whichever page is shown.
+- **An open project** is a sidebar of pages: **General** for the game's identity, **Display**, **Icons**, and one page per platform with what only that platform declares. The build controls stay at the bottom whichever page is shown, and **Projects** above the sidebar goes back to the home screen.
 - **Open Project** and **Save** read and write `project.fried`, keeping any keys the tool does not know about. The window title is marked while the form holds unsaved edits. **Close Project** (Ctrl+W) goes back to the home screen. Anything that would discard unsaved edits offers to save them first.
 - **Build** (Ctrl+B) runs the whole pipeline for the selected platform in a window that streams the output, colours it by message type, reports when it is done and offers to open the build folder:
 
@@ -45,7 +45,7 @@ cmake --build build
   A Vita build needs `VITASDK` set and a Switch or 3DS build needs `DEVKITPRO`, and all of them need `haxe` and `cmake` on the `PATH` the tool itself was started with.
 - **Change Icons...** on the Icons page writes a project's four icons from one source image, showing what each becomes first: `assets/icon.png` for the window, `sce_sys/icon0.png` for the Vita, `switch/icon.jpg` for the Switch and `3ds/icon.png` for the 3DS.
 - **Display** sets how the game fills the screen: at the screen's native resolution, or scaled from a size it is designed for by fit, integer scale, expand or stretch, with a nearest or linear filter. A platform's own page can give it a display of its own instead of the one every platform shares. A new project starts with every platform on a display of its own at native resolution, since each console's screen differs.
-- **LiveArea** on the Vita page sets the background (840x500) and start button (280x158) of the game's page on the Vita's home screen, converted to the palette PNGs the console reads and written on Save.
+- **LiveArea** on the Vita page sets the background (840x500) and start button (280x158) of the game's page on the Vita's home screen, converted to the palette PNGs the console reads, and its layout: the start button in the centre, or on the right with a title, subtitle and footer beside it. All of it is written on Save; a `template.xml` edited by hand is left alone unless replaced on purpose.
 - **Build type** and **Build directory** are remembered per project and per platform, defaulting to `Debug` and to `build`, `build/vita`, `build/switch` and `build/3ds`. The directory field is editable in full, with `{project}` standing for the project's own directory.
 
 A generated project also compiles by hand: `haxe build.hxml`, then `cmake -S . -B build && cmake --build build`, or the same with `-DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake` for a `.vpk` `-DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake` for a `.nro` and `-DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/3DS.cmake` for a `.3dsx`. Cloning the submodule needs `git` and network access to the engine repository.

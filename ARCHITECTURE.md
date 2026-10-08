@@ -42,6 +42,8 @@ Every file is staged before any of them is committed, so a failure on the third 
 
 The Vita page edits `sce_sys/livearea/contents/bg.png` and `startup.png`, the two images the engine packs beside `icon0.png`. Unlike the icons they are part of the form: a chosen image waits and is written on Save, before `project.fried`, so Save, Discard and the unsaved marker treat it the way they treat a field. One the console would reject, at the wrong size or truecolor, is converted when the project opens and waits for Save the same way, rather than being reported and left broken.
 
+`template.xml` offers only what homebrew is known to get right: `a1`, which centres the start button, and `psmobile`, which puts it on the right with three lines of text beside it laid out the way VitaShell lays out its own. Where each style's frames sit is not documented anywhere, so a fuller editor would be guesswork. A file counts as the form's when writing what the form read back from it gives the same document, compared without regard to indentation or attribute order. Anything else was edited by hand and is never rewritten silently, since the form would lose whatever it does not show.
+
 ## The command window
 
 One dialog runs every sequence of commands the tool issues, streaming a merged stdout and stderr into a read-only log.
