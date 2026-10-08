@@ -1,7 +1,10 @@
 #include "main_window.h"
 
 #include "build.h"
+#include "build_bar.h"
 #include "command_dialog.h"
+#include "display_editor.h"
+#include "help_label.h"
 #include "home_page.h"
 #include "icon.h"
 #include "icon_dialog.h"
@@ -10,76 +13,64 @@
 #include "recent_projects.h"
 
 #include <QCheckBox>
-#include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
+#include <QFont>
 #include <QFormLayout>
 #include <QFrame>
-#include <QKeySequence>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
 #include <QImage>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSettings>
-#include <QSpinBox>
+#include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
-#include <QToolButton>
-#include <QUrl>
 #include <QVBoxLayout>
+
+#include <tuple>
 
 namespace
 {
     const QString s_applicationTitle = QStringLiteral("Fried Project Manager");
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
 
-    constexpr int s_iconPreviewSize = 32;
-    constexpr int s_maxDisplaySide = 4096;
+    constexpr int s_sectionRole = Qt::UserRole;
+    constexpr int s_sectionListWidth = 170;
+    constexpr int s_sectionPadding = 4;
+    constexpr int s_iconPreviewSize = 96;
+    constexpr int s_iconColumnWidth = 140;
 
-    // Stands for the project's own directory, so the field is one editable path
-    // whichever side of the project it points at.
-    const QString s_projectToken = QStringLiteral("{project}");
+    // Every platform in the order the sidebar and the icons page list them.
+    const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds};
 
-    int comboIndexOf(Platform platform)
+    int indexOf(Platform platform)
     {
         return static_cast<int>(platform);
     }
 
-    int comboIndexOf(Build::Type type)
-    {
-        return static_cast<int>(type);
-    }
-
-    // A project path holds separators, so it is percent encoded to stay one key.
-    QString rememberedKey(const QString &setting, const QString &project, Platform platform)
-    {
-        return QStringLiteral("%1/%2/%3")
-            .arg(setting, platformKey(platform), QString::fromUtf8(QUrl::toPercentEncoding(project)));
-    }
-
-    QString buildDirectoryKey(const QString &project, Platform platform)
-    {
-        return rememberedKey(QStringLiteral("buildDirectories"), project, platform);
-    }
-
-    QString buildTypeKey(const QString &project, Platform platform)
-    {
-        return rememberedKey(QStringLiteral("buildTypes"), project, platform);
-    }
 }
 
 MainWindow::MainWindow()
 {
     setWindowTitle(s_applicationTitle);
-    resize(900, 600);
+    resize(960, 640);
 
     QMenu *fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
     fileMenu->addAction(QStringLiteral("&New Project..."), QKeySequence::New, this, &MainWindow::newProject);
     fileMenu->addAction(QStringLiteral("&Open Project..."), QKeySequence::Open, this, &MainWindow::chooseProject);
-    fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
+
+    m_save = fileMenu->addAction(QStringLiteral("&Save"), QKeySequence::Save, this, &MainWindow::saveProject);
+    m_save->setEnabled(false);
 
     m_close = new QAction(QStringLiteral("&Close Project"), this);
     m_close->setShortcut(QKeySequence::Close);
@@ -110,211 +101,347 @@ void MainWindow::buildPages()
     connect(m_home, &HomePage::newProjectRequested, this, &MainWindow::newProject);
     connect(m_home, &HomePage::openProjectRequested, this, &MainWindow::chooseProject);
 
-    buildForm();
+    m_projectView = buildProjectView();
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(m_home);
-    m_pages->addWidget(m_form);
+    m_pages->addWidget(m_projectView);
     setCentralWidget(m_pages);
 }
 
-void MainWindow::buildForm()
+// A sidebar of sections beside the selected one, with the build controls below both.
+QWidget *MainWindow::buildProjectView()
 {
-    m_form = new QWidget(this);
+    QWidget *view = new QWidget(this);
 
-    QVBoxLayout *column = new QVBoxLayout(m_form);
+    m_sections = new QStackedWidget(view);
 
-    m_fields = new QFormLayout();
-    column->addLayout(m_fields);
-    column->addStretch();
+    // One panel holding two lists, so the heading between them is a label and not a row.
+    QFrame *panel = new QFrame(view);
+    panel->setFrameShape(QFrame::StyledPanel);
+    panel->setBackgroundRole(QPalette::Base);
+    panel->setAutoFillBackground(true);
+    panel->setFixedWidth(s_sectionListWidth);
 
-    m_fields->addRow(QStringLiteral("Platform"), buildPlatformRow());
-    m_fields->addRow(QStringLiteral("Icon"), buildIconRow());
-    m_fields->addRow(QStringLiteral("Build type"), buildTypeRow());
-    m_fields->addRow(QStringLiteral("Build directory"), buildDirectoryRow());
+    QListWidget *project = newSectionList(panel);
+    addSection(project, QStringLiteral("General"), buildGeneralPage());
+    addSection(project, QStringLiteral("Display"), buildDisplayPage());
+    addSection(project, QStringLiteral("Icons"), buildIconsPage());
 
-    m_buildWarning = new QLabel(m_form);
-    m_buildWarning->setWordWrap(true);
-    m_fields->addRow(QString(), m_buildWarning);
-
-    // Everything below the line is what project.fried holds.
-    QFrame *separator = new QFrame(m_form);
-    separator->setFrameShape(QFrame::HLine);
-    separator->setFrameShadow(QFrame::Sunken);
-    m_fields->addRow(separator);
-
-    m_name = addField(QStringLiteral("Name"));
-    m_organization = addField(QStringLiteral("Organization"));
-    m_version = addField(QStringLiteral("Version"));
-    m_windowTitle = addField(QStringLiteral("Window title"));
-    m_vitaTitleId = addField(QStringLiteral("Vita title ID"));
-    m_fields->addRow(QStringLiteral("Display"), buildDisplayRow());
-
-    m_ownDisplay = new QCheckBox(m_form);
-    m_fields->addRow(QString(), m_ownDisplay);
-    connect(m_ownDisplay, &QCheckBox::toggled, this, &MainWindow::ownDisplayToggled);
-
-    showPlatformFields();
-
-}
-
-QWidget *MainWindow::buildPlatformRow()
-{
-    QWidget *row = new QWidget(m_form);
-    QHBoxLayout *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    m_platform = new QComboBox(row);
-    m_platform->insertItem(comboIndexOf(Platform::Pc), QStringLiteral("PC"));
-    m_platform->insertItem(comboIndexOf(Platform::Vita), QStringLiteral("PlayStation Vita"));
-    m_platform->insertItem(comboIndexOf(Platform::Switch), QStringLiteral("Nintendo Switch"));
-    m_platform->insertItem(comboIndexOf(Platform::Nintendo3ds), QStringLiteral("Nintendo 3DS"));
-
-    QToolButton *build = new QToolButton(row);
-    build->setDefaultAction(m_build);
-
-    layout->addWidget(m_platform);
-    layout->addWidget(build);
-    layout->addStretch();
-
-    connect(m_platform, &QComboBox::currentIndexChanged, this, &MainWindow::showPlatformFields);
-    return row;
-}
-
-QWidget *MainWindow::buildIconRow()
-{
-    QWidget *row = new QWidget(m_form);
-    QHBoxLayout *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    m_iconPreview = new QLabel(row);
-    m_iconPreview->setFixedSize(s_iconPreviewSize, s_iconPreviewSize);
-    m_iconPreview->setAlignment(Qt::AlignCenter);
-    m_iconPreview->setFrameShape(QFrame::StyledPanel);
-    m_iconPreview->setToolTip(Icon::path(Platform::Pc));
-
-    QPushButton *change = new QPushButton(QStringLiteral("Change..."), row);
-
-    layout->addWidget(m_iconPreview);
-    layout->addWidget(change);
-    layout->addStretch();
-
-    connect(change, &QPushButton::clicked, this, &MainWindow::chooseIcon);
-    return row;
-}
-
-QWidget *MainWindow::buildTypeRow()
-{
-    QWidget *row = new QWidget(m_form);
-    QHBoxLayout *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    m_buildType = new QComboBox(row);
-    m_buildType->insertItem(comboIndexOf(Build::Type::Debug), Build::name(Build::Type::Debug));
-    m_buildType->insertItem(comboIndexOf(Build::Type::Release), Build::name(Build::Type::Release));
-    m_buildType->setToolTip(QStringLiteral("Debug keeps the symbols a debugger needs. Release optimises, which is "
-                                           "what a build for players wants."));
-
-    layout->addWidget(m_buildType);
-    layout->addStretch();
-
-    connect(m_buildType, &QComboBox::currentIndexChanged, this, &MainWindow::rememberBuildType);
-    return row;
-}
-
-QWidget *MainWindow::buildDirectoryRow()
-{
-    QWidget *row = new QWidget(m_form);
-    QHBoxLayout *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    m_buildDirectory = new QLineEdit(row);
-
-    QPushButton *browse = new QPushButton(QStringLiteral("Browse..."), row);
-
-    m_buildReset = new QPushButton(QStringLiteral("Reset"), row);
-    m_buildReset->setToolTip(QStringLiteral("Back to where the chosen platform builds by default."));
-
-    layout->addWidget(m_buildDirectory);
-    layout->addWidget(browse);
-    layout->addWidget(m_buildReset);
-
-    connect(browse, &QPushButton::clicked, this, &MainWindow::chooseBuildDirectory);
-    connect(m_buildReset, &QPushButton::clicked, this, &MainWindow::resetBuildDirectory);
-    connect(m_buildDirectory, &QLineEdit::editingFinished, this, &MainWindow::rememberBuildDirectory);
-    connect(m_buildDirectory, &QLineEdit::textChanged, this, &MainWindow::buildDirectoryChanged);
-    return row;
-}
-
-QWidget *MainWindow::buildDisplayRow()
-{
-    QWidget *row = new QWidget(m_form);
-    QHBoxLayout *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    m_displayMode = new QComboBox(row);
-    const QList<std::array<QString, 3>> modes = {
-        {QStringLiteral("Native resolution"), QStringLiteral("default"),
-         QStringLiteral("Draws at the screen's own resolution, unscaled. The game adapts to whatever size it gets.")},
-        {QStringLiteral("Fit"), QStringLiteral("fit"),
-         QStringLiteral("Scales the game's size as large as the screen allows, keeping its shape, with black bars.")},
-        {QStringLiteral("Integer scale"), QStringLiteral("integer"),
-         QStringLiteral("Like Fit, but only by whole multiples, so every pixel stays the same size.")},
-        {QStringLiteral("Expand"), QStringLiteral("expand"),
-         QStringLiteral("Like Fit, but the game sees more on the longer side instead of black bars.")},
-        {QStringLiteral("Stretch"), QStringLiteral("stretch"),
-         QStringLiteral("Fills the screen with the game's size, distorting its shape.")},
-    };
-    for (const auto &[label, mode, description] : modes)
+    QListWidget *platforms = newSectionList(panel);
+    for (const Platform platform : s_platforms)
     {
-        m_displayMode->addItem(label, mode);
-        m_displayMode->setItemData(m_displayMode->count() - 1, description, Qt::ToolTipRole);
+        addSection(platforms, platformName(platform), buildPlatformPage(platform));
     }
 
-    m_displayWidth = new QSpinBox(row);
-    m_displayWidth->setRange(1, s_maxDisplaySide);
-    m_displayWidth->setToolTip(QStringLiteral("The width the game is designed for."));
-    m_displayHeight = new QSpinBox(row);
-    m_displayHeight->setRange(1, s_maxDisplaySide);
-    m_displayHeight->setToolTip(QStringLiteral("The height the game is designed for."));
+    QLabel *platformsHeading = helpLabel(QStringLiteral("PLATFORMS"), panel);
+    QFont small = platformsHeading->font();
+    small.setBold(true);
+    small.setPointSizeF(small.pointSizeF() * 0.85);
+    platformsHeading->setFont(small);
+    platformsHeading->setContentsMargins(s_sectionPadding, 0, 0, 0);
 
-    m_displayFilter = new QComboBox(row);
-    m_displayFilter->addItem(QStringLiteral("Nearest"), QStringLiteral("nearest"));
-    m_displayFilter->setItemData(0, QStringLiteral("Keeps pixels sharp when scaled, which is what pixel art wants."),
-                                 Qt::ToolTipRole);
-    m_displayFilter->addItem(QStringLiteral("Linear"), QStringLiteral("linear"));
-    m_displayFilter->setItemData(1, QStringLiteral("Blends pixels when scaled, which suits art drawn at a high resolution."),
-                                 Qt::ToolTipRole);
+    QVBoxLayout *panelLayout = new QVBoxLayout(panel);
+    panelLayout->setContentsMargins(s_sectionPadding, s_sectionPadding, s_sectionPadding, s_sectionPadding);
+    panelLayout->addWidget(project);
+    panelLayout->addSpacing(s_sectionPadding * 2);
+    panelLayout->addWidget(platformsHeading);
+    panelLayout->addWidget(platforms);
+    panelLayout->addStretch();
 
-    layout->addWidget(m_displayMode);
-    layout->addWidget(m_displayWidth);
-    layout->addWidget(new QLabel(QStringLiteral("x"), row));
-    layout->addWidget(m_displayHeight);
-    layout->addWidget(m_displayFilter);
+    project->setCurrentRow(0);
+
+    m_saveButton = new QPushButton(QStringLiteral("Save"), view);
+    m_saveButton->setToolTip(QStringLiteral("Write the form to project.fried."));
+    connect(m_saveButton, &QPushButton::clicked, this, &MainWindow::saveProject);
+
+    QVBoxLayout *sidebar = new QVBoxLayout;
+    sidebar->addWidget(panel, 1);
+    sidebar->addWidget(m_saveButton);
+
+    QHBoxLayout *body = new QHBoxLayout;
+    body->addLayout(sidebar);
+    body->addWidget(m_sections, 1);
+
+    QFrame *separator = new QFrame(view);
+    separator->setFrameShape(QFrame::HLine);
+    separator->setFrameShadow(QFrame::Sunken);
+
+    m_buildBar = new BuildBar(view, m_build);
+
+    QVBoxLayout *layout = new QVBoxLayout(view);
+    layout->addLayout(body, 1);
+    layout->addWidget(separator);
+    layout->addWidget(m_buildBar);
+    return view;
+}
+
+QWidget *MainWindow::newPage(const QString &title, const QString &description, QVBoxLayout **content)
+{
+    QWidget *page = new QWidget;
+
+    QLabel *heading = new QLabel(title, page);
+    QFont large = heading->font();
+    large.setPointSize(large.pointSize() + 4);
+    large.setBold(true);
+    heading->setFont(large);
+
+    QVBoxLayout *layout = new QVBoxLayout(page);
+    layout->addWidget(heading);
+    layout->addWidget(helpLabel(description, page));
+    layout->addSpacing(heading->fontMetrics().lineSpacing() / 2);
+
+    *content = new QVBoxLayout;
+    layout->addLayout(*content);
     layout->addStretch();
 
-    connect(m_displayMode, &QComboBox::currentIndexChanged, this, &MainWindow::displayEdited);
-    connect(m_displayWidth, &QSpinBox::valueChanged, this, &MainWindow::displayEdited);
-    connect(m_displayHeight, &QSpinBox::valueChanged, this, &MainWindow::displayEdited);
-    connect(m_displayFilter, &QComboBox::currentIndexChanged, this, &MainWindow::displayEdited);
-    return row;
+    // A page that outgrows the window scrolls instead of squeezing its fields.
+    QScrollArea *scroll = new QScrollArea;
+    scroll->setWidget(page);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    return scroll;
+}
+
+QListWidget *MainWindow::newSectionList(QWidget *parent)
+{
+    QListWidget *list = new QListWidget(parent);
+    list->setFrameShape(QFrame::NoFrame);
+    list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    list->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    list->setStyleSheet(QStringLiteral("QListWidget::item { padding: %1px; }").arg(s_sectionPadding));
+
+    // Only one row is current across every list, as if they were one.
+    connect(list, &QListWidget::currentItemChanged, this, [this, list](QListWidgetItem *current) {
+        if (!current)
+        {
+            return;
+        }
+
+        for (QListWidget *other : std::as_const(m_sectionLists))
+        {
+            if (other != list)
+            {
+                const QSignalBlocker blocker(other);
+                other->setCurrentItem(nullptr);
+            }
+        }
+        m_sections->setCurrentIndex(current->data(s_sectionRole).toInt());
+    });
+
+    m_sectionLists << list;
+    return list;
+}
+
+void MainWindow::addSection(QListWidget *list, const QString &name, QWidget *page)
+{
+    QListWidgetItem *item = new QListWidgetItem(name, list);
+    item->setData(s_sectionRole, m_sections->addWidget(page));
+
+    // Every row shows at once, so the list is exactly as tall as its rows.
+    list->setFixedHeight(list->sizeHintForRow(0) * list->count() + 2 * list->frameWidth());
+}
+
+void MainWindow::showSectionHolding(QWidget *widget)
+{
+    for (QWidget *ancestor = widget; ancestor; ancestor = ancestor->parentWidget())
+    {
+        const int index = m_sections->indexOf(ancestor);
+        if (index < 0)
+        {
+            continue;
+        }
+
+        for (QListWidget *list : std::as_const(m_sectionLists))
+        {
+            for (int row = 0; row < list->count(); ++row)
+            {
+                if (list->item(row)->data(s_sectionRole).toInt() == index)
+                {
+                    list->setCurrentRow(row);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+QLineEdit *MainWindow::addField(QFormLayout *form, QWidget *parent, const QString &label, const QString &help)
+{
+    QLineEdit *field = new QLineEdit(parent);
+    connect(field, &QLineEdit::textChanged, this, &MainWindow::showUnsavedState);
+    if (help.isEmpty())
+    {
+        form->addRow(label, field);
+        return field;
+    }
+
+    // The help sits right under its field rather than a whole form row away.
+    QVBoxLayout *column = new QVBoxLayout;
+    column->setSpacing(2);
+    column->addWidget(field);
+    column->addWidget(helpLabel(help, parent));
+    form->addRow(label, column);
+    return field;
+}
+
+QWidget *MainWindow::buildGeneralPage()
+{
+    QVBoxLayout *content = nullptr;
+    QWidget *page = newPage(QStringLiteral("General"),
+                            QStringLiteral("The game's identity. Every platform's package is labelled with it."),
+                            &content);
+    QWidget *parent = content->parentWidget();
+
+    QFormLayout *form = new QFormLayout;
+    content->addLayout(form);
+
+    m_name = addField(form, parent, QStringLiteral("Name"));
+    m_organization = addField(form, parent, QStringLiteral("Organization"),
+                              QStringLiteral("Shown as the author on the Switch and the 3DS."));
+    m_version = addField(form, parent, QStringLiteral("Version"),
+                         QStringLiteral("Two digits, a dot and two digits (01.00), which is what the Vita requires."));
+    m_windowTitle = addField(form, parent, QStringLiteral("Window title"),
+                             QStringLiteral("The title of the game's window on PC."));
+    return page;
+}
+
+QWidget *MainWindow::buildDisplayPage()
+{
+    QVBoxLayout *content = nullptr;
+    QWidget *page = newPage(QStringLiteral("Display"),
+                            QStringLiteral("How the game fills the screen. Every platform uses this display unless "
+                                           "its own page gives it one."),
+                            &content);
+    QWidget *parent = content->parentWidget();
+
+    m_sharedDisplayEditor = new DisplayEditor(parent);
+    connect(m_sharedDisplayEditor, &DisplayEditor::edited, this, &MainWindow::sharedDisplayEdited);
+
+    m_displayOverrides = new QLabel(parent);
+    m_displayOverrides->setWordWrap(true);
+
+    content->addWidget(m_sharedDisplayEditor);
+    content->addSpacing(m_displayOverrides->fontMetrics().lineSpacing());
+    content->addWidget(m_displayOverrides);
+    return page;
+}
+
+QWidget *MainWindow::buildIconsPage()
+{
+    QVBoxLayout *content = nullptr;
+    QWidget *page = newPage(QStringLiteral("Icons"),
+                            QStringLiteral("Each platform reads its icon at a size and in a format of its own, so a "
+                                           "project keeps one file per platform, all written from one image."),
+                            &content);
+    QWidget *parent = content->parentWidget();
+
+    QGridLayout *grid = new QGridLayout;
+    for (const Platform platform : s_platforms)
+    {
+        const int column = indexOf(platform);
+
+        QLabel *preview = new QLabel(parent);
+        preview->setFixedSize(s_iconPreviewSize, s_iconPreviewSize);
+        preview->setAlignment(Qt::AlignCenter);
+        preview->setFrameShape(QFrame::StyledPanel);
+        m_iconPreviews[column] = preview;
+
+        QLabel *path = helpLabel(Icon::path(platform), parent);
+
+        grid->setColumnMinimumWidth(column, s_iconColumnWidth);
+        grid->addWidget(new QLabel(platformName(platform), parent), 0, column);
+        grid->addWidget(preview, 1, column);
+        grid->addWidget(path, 2, column);
+    }
+    grid->setColumnStretch(s_platformCount, 1);
+
+    QPushButton *change = new QPushButton(QStringLiteral("Change Icons..."), parent);
+    connect(change, &QPushButton::clicked, this, &MainWindow::chooseIcon);
+
+    QHBoxLayout *buttons = new QHBoxLayout;
+    buttons->addWidget(change);
+    buttons->addStretch();
+
+    content->addLayout(grid);
+    content->addLayout(buttons);
+    return page;
+}
+
+QWidget *MainWindow::buildPlatformPage(Platform platform)
+{
+    QString description;
+    switch (platform)
+    {
+    case Platform::Vita:
+        description = QStringLiteral("What a PlayStation Vita package declares beyond the game's identity.");
+        break;
+    case Platform::Switch:
+        description = QStringLiteral("A Switch .nro is labelled with the name, organization and version on the "
+                                     "General page.");
+        break;
+    case Platform::Nintendo3ds:
+        description = QStringLiteral("A 3DS .3dsx is labelled with the name, organization and version on the "
+                                     "General page.");
+        break;
+    default:
+        description = QStringLiteral("The game as a desktop executable.");
+        break;
+    }
+
+    QVBoxLayout *content = nullptr;
+    QWidget *page = newPage(platformName(platform), description, &content);
+    QWidget *parent = content->parentWidget();
+
+    if (platform == Platform::Vita)
+    {
+        QFormLayout *form = new QFormLayout;
+        m_vitaTitleId = addField(form, parent, QStringLiteral("Title ID"),
+                                 QStringLiteral("Four capital letters and five digits (FRIE00001). The console tells "
+                                                "installed games apart by it, so no two may share one."));
+        content->addLayout(form);
+    }
+
+    content->addWidget(buildPlatformDisplay(platform, parent));
+    return page;
+}
+
+QWidget *MainWindow::buildPlatformDisplay(Platform platform, QWidget *parent)
+{
+    QGroupBox *group = new QGroupBox(QStringLiteral("Display"), parent);
+
+    PlatformDisplay &display = m_platformDisplayEditors[indexOf(platform)];
+    display.isOwn = new QCheckBox(QStringLiteral("Use a display of its own instead of the shared one"), group);
+    display.editor = new DisplayEditor(group);
+
+    QVBoxLayout *layout = new QVBoxLayout(group);
+    layout->addWidget(display.isOwn);
+    layout->addWidget(display.editor);
+
+    connect(display.isOwn, &QCheckBox::toggled, this,
+            [this, platform](bool isOwn) { ownDisplayToggled(platform, isOwn); });
+    connect(display.editor, &DisplayEditor::edited, this, [this, platform] { platformDisplayEdited(platform); });
+    return group;
 }
 
 void MainWindow::showHome()
 {
-    if (m_pages->currentWidget() == m_form && !confirmLeavingProject())
+    if (m_pages->currentWidget() == m_projectView && !confirmLeavingProject())
     {
         return;
     }
 
     m_project = Project();
+    m_buildBar->setProjectDirectory(QString());
     m_build->setEnabled(false);
+    m_save->setEnabled(false);
     m_icon->setEnabled(false);
     m_close->setEnabled(false);
 
     m_home->refresh();
     m_pages->setCurrentWidget(m_home);
     setWindowTitle(s_applicationTitle);
+    setWindowModified(false);
     statusBar()->showMessage(QStringLiteral("No project open"));
 }
 
@@ -345,228 +472,91 @@ void MainWindow::chooseIcon()
     IconDialog dialog(this, m_project.directory());
     if (dialog.exec() == QDialog::Accepted)
     {
-        showIcon();
+        showIcons();
         QMessageBox::information(this, s_applicationTitle, dialog.report());
     }
 }
 
-void MainWindow::showIcon()
+void MainWindow::showIcons()
 {
-    const QImage icon(QDir(m_project.directory()).filePath(Icon::path(Platform::Pc)));
-    m_iconPreview->setPixmap(QPixmap::fromImage(icon).scaled(s_iconPreviewSize, s_iconPreviewSize, Qt::KeepAspectRatio,
-                                                             Qt::SmoothTransformation));
+    const QDir directory(m_project.directory());
+    for (const Platform platform : s_platforms)
+    {
+        QLabel *preview = m_iconPreviews[indexOf(platform)];
+        const QImage icon(directory.filePath(Icon::path(platform)));
+        if (icon.isNull())
+        {
+            preview->setPixmap(QPixmap());
+            preview->setText(QStringLiteral("none"));
+            continue;
+        }
+
+        // A small console icon is shown at its own size rather than blurred up.
+        const QPixmap pixmap = QPixmap::fromImage(icon);
+        preview->setPixmap(pixmap.width() > s_iconPreviewSize
+                               ? pixmap.scaled(s_iconPreviewSize, s_iconPreviewSize, Qt::KeepAspectRatio,
+                                               Qt::SmoothTransformation)
+                               : pixmap);
+        preview->setToolTip(QStringLiteral("%1x%2").arg(icon.width()).arg(icon.height()));
+    }
 }
 
-void MainWindow::chooseBuildDirectory()
+void MainWindow::showDisplays()
 {
-    const QDir project(m_project.directory());
-    const QString chosen = QFileDialog::getExistingDirectory(this, QStringLiteral("Build Directory"),
-                                                             project.filePath(chosenBuildDirectory()));
-    if (chosen.isEmpty())
+    m_sharedDisplayEditor->setDisplay(m_sharedDisplay);
+
+    QStringList overridden;
+    for (const Platform platform : s_platforms)
     {
-        return;
+        const std::optional<DisplaySettings> &own = m_platformDisplays[indexOf(platform)];
+        const PlatformDisplay &display = m_platformDisplayEditors[indexOf(platform)];
+
+        const QSignalBlocker blocker(display.isOwn);
+        display.isOwn->setChecked(own.has_value());
+        display.editor->setDisplay(own ? *own : m_sharedDisplay);
+        display.editor->setEnabled(own.has_value());
+
+        if (own)
+        {
+            overridden << platformName(platform);
+        }
     }
 
-    // A directory inside the project travels with it, so it is kept relative.
-    const QString relative = project.relativeFilePath(chosen);
-    showBuildDirectory(relative.startsWith(QStringLiteral("..")) ? chosen : relative);
-    rememberBuildDirectory();
-}
-
-void MainWindow::showBuildDirectory()
-{
-    QSettings settings;
-    const QString key = buildDirectoryKey(m_project.directory(), selectedPlatform());
-    showBuildDirectory(settings.value(key, Build::defaultDirectory(selectedPlatform())).toString());
-}
-
-void MainWindow::showBuildDirectory(const QString &directory)
-{
-    m_buildDirectory->setText(QDir::isAbsolutePath(directory)
-                                  ? QDir::toNativeSeparators(directory)
-                                  : s_projectToken + QChar('/') + directory);
-}
-
-void MainWindow::showBuildType()
-{
-    QSettings settings;
-    const QString remembered =
-        settings.value(buildTypeKey(m_project.directory(), selectedPlatform()), Build::name(Build::Type::Debug))
-            .toString();
-    m_buildType->setCurrentIndex(comboIndexOf(Build::typeNamed(remembered)));
-}
-
-void MainWindow::rememberBuildType()
-{
-    if (m_project.directory().isEmpty())
+    if (overridden.isEmpty())
     {
-        return;
+        m_displayOverrides->setText(QStringLiteral("Every platform uses this display."));
+    }
+    else if (overridden.size() == s_platformCount)
+    {
+        m_displayOverrides->setText(QStringLiteral("Every platform has a display of its own, so this one is not "
+                                                   "used. Each platform's page says what it uses instead."));
+    }
+    else
+    {
+        m_displayOverrides->setText(QStringLiteral("Not used by %1, which have a display of their own.")
+                                        .arg(overridden.join(QStringLiteral(", "))));
     }
 
-    QSettings settings;
-    settings.setValue(buildTypeKey(m_project.directory(), selectedPlatform()), Build::name(selectedBuildType()));
+    showUnsavedState();
 }
 
-Build::Type MainWindow::selectedBuildType() const
+void MainWindow::sharedDisplayEdited()
 {
-    return static_cast<Build::Type>(m_buildType->currentIndex());
+    m_sharedDisplay = m_sharedDisplayEditor->display();
+    showDisplays();
 }
 
-void MainWindow::buildDirectoryChanged()
+void MainWindow::platformDisplayEdited(Platform platform)
 {
-    const QString chosen = chosenBuildDirectory();
-    m_buildDirectory->setToolTip(QDir(m_project.directory()).filePath(chosen));
-    m_buildReset->setEnabled(chosen != Build::defaultDirectory(selectedPlatform()));
-
-    const QString problem = vitaSpaceProblem();
-    m_buildWarning->setText(problem);
-    m_fields->setRowVisible(m_buildWarning, !problem.isEmpty());
-}
-
-void MainWindow::resetBuildDirectory()
-{
-    showBuildDirectory(Build::defaultDirectory(selectedPlatform()));
-    rememberBuildDirectory();
-}
-
-// Whatever follows the token is relative to the project; anything else stands on its own.
-QString MainWindow::chosenBuildDirectory() const
-{
-    QString typed = m_buildDirectory->text().trimmed();
-    if (!typed.startsWith(s_projectToken))
-    {
-        return typed;
-    }
-
-    typed = typed.mid(s_projectToken.size());
-    while (typed.startsWith(QChar('/')) || typed.startsWith(QChar('\\')))
-    {
-        typed.remove(0, 1);
-    }
-    return typed;
-}
-
-// VitaSDK hands vita-pack-vpk every path unquoted, so a space splits an argument.
-QString MainWindow::vitaSpaceProblem() const
-{
-    if (selectedPlatform() != Platform::Vita)
-    {
-        return QString();
-    }
-
-    QStringList spaced;
-
-    // Its assets are packed straight from here, wherever the build tree is.
-    if (m_project.directory().contains(QChar(' ')))
-    {
-        spaced << QStringLiteral("the project's own path");
-    }
-    if (chosenBuildDirectory().contains(QChar(' ')))
-    {
-        spaced << QStringLiteral("the build directory");
-    }
-
-    if (spaced.isEmpty())
-    {
-        return QString();
-    }
-
-    return QStringLiteral("A Vita build will compile but fail to be packaged: VitaSDK does not quote the paths it "
-                          "packs with, and there is a space in %1.")
-        .arg(spaced.join(QStringLiteral(" and in ")));
-}
-
-void MainWindow::rememberBuildDirectory()
-{
-    if (m_project.directory().isEmpty() || chosenBuildDirectory().isEmpty())
-    {
-        return;
-    }
-
-    QSettings settings;
-    settings.setValue(buildDirectoryKey(m_project.directory(), selectedPlatform()), chosenBuildDirectory());
-}
-
-QLineEdit *MainWindow::addField(const QString &label)
-{
-    QLineEdit *field = new QLineEdit(m_form);
-    m_fields->addRow(label, field);
-    return field;
-}
-
-void MainWindow::showPlatformFields()
-{
-    const bool vita = selectedPlatform() == Platform::Vita;
-    m_fields->setRowVisible(m_vitaTitleId, vita);
-    showDisplay();
-
-    if (!m_project.directory().isEmpty())
-    {
-        showIcon();
-        showBuildType();
-        showBuildDirectory();
-    }
-
-    buildDirectoryChanged();
-}
-
-void MainWindow::showDisplay()
-{
-    const std::optional<DisplaySettings> &own = platformDisplay();
-    const DisplaySettings shown = own ? *own : m_sharedDisplay;
-
-    m_isShowingDisplay = true;
-    m_ownDisplay->setText(QStringLiteral("Different on %1").arg(m_platform->currentText()));
-    m_ownDisplay->setChecked(own.has_value());
-    m_displayMode->setCurrentIndex(std::max(0, m_displayMode->findData(shown.m_mode)));
-    m_displayWidth->setValue(shown.m_width);
-    m_displayHeight->setValue(shown.m_height);
-    m_displayFilter->setCurrentIndex(std::max(0, m_displayFilter->findData(shown.m_filter)));
-    m_isShowingDisplay = false;
-
-    const bool isScaled = shown.m_mode != QStringLiteral("default");
-    m_displayWidth->setEnabled(isScaled);
-    m_displayHeight->setEnabled(isScaled);
-}
-
-void MainWindow::displayEdited()
-{
-    if (m_isShowingDisplay)
-    {
-        return;
-    }
-
-    std::optional<DisplaySettings> &own = platformDisplay();
-    (own ? *own : m_sharedDisplay) = displayInForm();
-    showDisplay();
+    m_platformDisplays[indexOf(platform)] = m_platformDisplayEditors[indexOf(platform)].editor->display();
+    showUnsavedState();
 }
 
 // A platform's own display starts as a copy of the shared one.
-void MainWindow::ownDisplayToggled(bool isOwn)
+void MainWindow::ownDisplayToggled(Platform platform, bool isOwn)
 {
-    if (m_isShowingDisplay)
-    {
-        return;
-    }
-
-    std::optional<DisplaySettings> &own = platformDisplay();
-    own = isOwn ? std::optional<DisplaySettings>(m_sharedDisplay) : std::nullopt;
-    showDisplay();
-}
-
-DisplaySettings MainWindow::displayInForm() const
-{
-    return {
-        m_displayMode->currentData().toString(),
-        m_displayWidth->value(),
-        m_displayHeight->value(),
-        m_displayFilter->currentData().toString(),
-    };
-}
-
-std::optional<DisplaySettings> &MainWindow::platformDisplay()
-{
-    return m_platformDisplays[comboIndexOf(selectedPlatform())];
+    m_platformDisplays[indexOf(platform)] = isOwn ? std::optional<DisplaySettings>(m_sharedDisplay) : std::nullopt;
+    showDisplays();
 }
 
 bool MainWindow::hasUnsavedDisplay() const
@@ -576,19 +566,14 @@ bool MainWindow::hasUnsavedDisplay() const
         return true;
     }
 
-    for (int index = 0; index < s_platformCount; ++index)
+    for (const Platform platform : s_platforms)
     {
-        if (m_platformDisplays[index] != m_project.display(static_cast<Platform>(index)))
+        if (m_platformDisplays[indexOf(platform)] != m_project.display(platform))
         {
             return true;
         }
     }
     return false;
-}
-
-Platform MainWindow::selectedPlatform() const
-{
-    return static_cast<Platform>(m_platform->currentIndex());
 }
 
 QString MainWindow::nearbyLocation() const
@@ -699,21 +684,22 @@ void MainWindow::showProject()
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
     m_sharedDisplay = m_project.display();
-    for (int index = 0; index < s_platformCount; ++index)
+    for (const Platform platform : s_platforms)
     {
-        m_platformDisplays[index] = m_project.display(static_cast<Platform>(index));
+        m_platformDisplays[indexOf(platform)] = m_project.display(platform);
     }
-    showDisplay();
+    showDisplays();
 
-    showIcon();
-    showBuildType();
-    showBuildDirectory();
+    showIcons();
+    m_buildBar->setProjectDirectory(m_project.directory());
 
-    m_pages->setCurrentWidget(m_form);
+    m_pages->setCurrentWidget(m_projectView);
     m_build->setEnabled(true);
+    m_save->setEnabled(true);
     m_icon->setEnabled(true);
     m_close->setEnabled(true);
-    setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
+    setWindowTitle(QStringLiteral("%1[*] - %2").arg(m_project.name(), s_applicationTitle));
+    showUnsavedState();
     statusBar()->showMessage(QDir::toNativeSeparators(m_project.filePath()));
 }
 
@@ -725,6 +711,13 @@ bool MainWindow::hasUnsavedEdits() const
            || m_windowTitle->text() != m_project.windowTitle()
            || m_vitaTitleId->text() != m_project.vitaTitleId()
            || hasUnsavedDisplay();
+}
+
+void MainWindow::showUnsavedState()
+{
+    const bool isUnsaved = !m_project.directory().isEmpty() && hasUnsavedEdits();
+    setWindowModified(isUnsaved);
+    m_saveButton->setEnabled(isUnsaved);
 }
 
 // The build reads project.fried, not the form.
@@ -757,40 +750,40 @@ void MainWindow::buildProject()
         return;
     }
 
-    rememberBuildDirectory();
-    rememberBuildType();
+    m_buildBar->remember();
+
+    const Platform platform = m_buildBar->platform();
+    const Build::Type type = m_buildBar->type();
 
     QString error;
-    const QList<QStringList> commands =
-        Build::commands(selectedPlatform(), selectedBuildType(), chosenBuildDirectory(), &error);
+    const QList<QStringList> commands = Build::commands(platform, type, m_buildBar->directory(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);
         return;
     }
 
-    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(m_platform->currentText(), Build::name(selectedBuildType())),
+    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(platformName(platform), Build::name(type)),
                         m_project.directory(), commands);
     build.setActivity(QStringLiteral("Compiling"));
-    build.offerToOpen(QStringLiteral("Open Build Folder"),
-                      QDir(m_project.directory()).filePath(chosenBuildDirectory()));
+    build.offerToOpen(QStringLiteral("Open Build Folder"), QDir(m_project.directory()).filePath(m_buildBar->directory()));
     build.exec();
 
     statusBar()->showMessage(build.succeeded()
-                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), m_platform->currentText())
-                                 : QStringLiteral("Build for %1 did not finish").arg(m_platform->currentText()));
+                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), platformName(platform))
+                                 : QStringLiteral("Build for %1 did not finish").arg(platformName(platform)));
 }
 
 QString MainWindow::firstProblem(QLineEdit **field) const
 {
-    const QVector<QPair<QLineEdit *, QString>> problems = {
-        {m_name, Project::checkIdentity(m_name->text())},
-        {m_organization, Project::checkIdentity(m_organization->text())},
-        {m_version, Project::checkVersion(m_version->text())},
-        {m_vitaTitleId, Project::checkVitaTitleId(m_vitaTitleId->text())},
+    const QList<std::tuple<QLineEdit *, QString, QString>> problems = {
+        {m_name, QStringLiteral("Name"), Project::checkIdentity(m_name->text())},
+        {m_organization, QStringLiteral("Organization"), Project::checkIdentity(m_organization->text())},
+        {m_version, QStringLiteral("Version"), Project::checkVersion(m_version->text())},
+        {m_vitaTitleId, QStringLiteral("Vita title ID"), Project::checkVitaTitleId(m_vitaTitleId->text())},
     };
 
-    for (const auto &[edit, problem] : problems)
+    for (const auto &[edit, label, problem] : problems)
     {
         if (problem.isEmpty())
         {
@@ -798,8 +791,7 @@ QString MainWindow::firstProblem(QLineEdit **field) const
         }
 
         *field = edit;
-        const QLabel *label = qobject_cast<QLabel *>(m_fields->labelForField(edit));
-        return QStringLiteral("%1 %2").arg(label->text(), problem);
+        return QStringLiteral("%1 %2").arg(label, problem);
     }
 
     return QString();
@@ -811,6 +803,7 @@ bool MainWindow::saveProject()
     const QString problem = firstProblem(&invalid);
     if (!problem.isEmpty())
     {
+        showSectionHolding(invalid);
         QMessageBox::warning(this, QStringLiteral("Save"), problem);
         invalid->setFocus();
         invalid->selectAll();
@@ -823,9 +816,9 @@ bool MainWindow::saveProject()
     m_project.setWindowTitle(m_windowTitle->text());
     m_project.setVitaTitleId(m_vitaTitleId->text());
     m_project.setDisplay(m_sharedDisplay);
-    for (int index = 0; index < s_platformCount; ++index)
+    for (const Platform platform : s_platforms)
     {
-        m_project.setDisplay(static_cast<Platform>(index), m_platformDisplays[index]);
+        m_project.setDisplay(platform, m_platformDisplays[indexOf(platform)]);
     }
 
     QString error;
@@ -835,7 +828,8 @@ bool MainWindow::saveProject()
         return false;
     }
 
-    setWindowTitle(QStringLiteral("%1 - %2").arg(m_project.name(), s_applicationTitle));
+    setWindowTitle(QStringLiteral("%1[*] - %2").arg(m_project.name(), s_applicationTitle));
+    showUnsavedState();
     statusBar()->showMessage(QStringLiteral("Saved %1").arg(QDir::toNativeSeparators(m_project.filePath())));
     return true;
 }

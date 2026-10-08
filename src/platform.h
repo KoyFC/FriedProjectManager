@@ -27,3 +27,18 @@ inline QString platformKey(Platform platform)
         return QStringLiteral("pc");
     }
 }
+
+inline QString platformName(Platform platform)
+{
+    switch (platform)
+    {
+    case Platform::Vita:
+        return QStringLiteral("PlayStation Vita");
+    case Platform::Switch:
+        return QStringLiteral("Nintendo Switch");
+    case Platform::Nintendo3ds:
+        return QStringLiteral("Nintendo 3DS");
+    default:
+        return QStringLiteral("PC");
+    }
+}

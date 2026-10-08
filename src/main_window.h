@@ -1,24 +1,26 @@
 #pragma once
 
-#include "build.h"
 #include "project.h"
 
+#include <QList>
 #include <QMainWindow>
 
 #include <array>
 #include <optional>
 
+class BuildBar;
+class DisplayEditor;
 class HomePage;
 
 class QAction;
 class QCheckBox;
-class QComboBox;
 class QFormLayout;
 class QLabel;
 class QLineEdit;
+class QListWidget;
 class QPushButton;
-class QSpinBox;
 class QStackedWidget;
+class QVBoxLayout;
 class QWidget;
 
 class MainWindow : public QMainWindow
@@ -33,14 +35,24 @@ public:
     bool saveProject();
 
 private:
+    struct PlatformDisplay
+    {
+        QCheckBox *isOwn = nullptr;
+        DisplayEditor *editor = nullptr;
+    };
+
     void buildPages();
-    void buildForm();
-    QWidget *buildPlatformRow();
-    QWidget *buildIconRow();
-    QWidget *buildTypeRow();
-    QWidget *buildDirectoryRow();
-    QWidget *buildDisplayRow();
-    QLineEdit *addField(const QString &label);
+    QWidget *buildProjectView();
+    QWidget *buildGeneralPage();
+    QWidget *buildDisplayPage();
+    QWidget *buildIconsPage();
+    QWidget *buildPlatformPage(Platform platform);
+    QWidget *buildPlatformDisplay(Platform platform, QWidget *parent);
+    QWidget *newPage(const QString &title, const QString &description, QVBoxLayout **content);
+    QListWidget *newSectionList(QWidget *parent);
+    void addSection(QListWidget *list, const QString &name, QWidget *page);
+    void showSectionHolding(QWidget *widget);
+    QLineEdit *addField(QFormLayout *form, QWidget *parent, const QString &label, const QString &help = QString());
 
     void newProject();
     void showHome();
@@ -48,30 +60,17 @@ private:
     bool confirmGitNotice();
     void buildProject();
     void chooseIcon();
-    void showIcon();
-    void chooseBuildDirectory();
-    void showBuildType();
-    void rememberBuildType();
-    Build::Type selectedBuildType() const;
-    void resetBuildDirectory();
-    void showBuildDirectory();
-    void showBuildDirectory(const QString &directory);
-    void buildDirectoryChanged();
-    QString chosenBuildDirectory() const;
-    QString vitaSpaceProblem() const;
-    void rememberBuildDirectory();
+    void showIcons();
     bool confirmUnsavedEdits();
     bool hasUnsavedEdits() const;
+    void showUnsavedState();
     void chooseProject();
-    Platform selectedPlatform() const;
     QString nearbyLocation() const;
     void showProject();
-    void showPlatformFields();
-    void showDisplay();
-    void displayEdited();
-    void ownDisplayToggled(bool isOwn);
-    DisplaySettings displayInForm() const;
-    std::optional<DisplaySettings> &platformDisplay();
+    void showDisplays();
+    void sharedDisplayEdited();
+    void platformDisplayEdited(Platform platform);
+    void ownDisplayToggled(Platform platform, bool isOwn);
     bool hasUnsavedDisplay() const;
     QString firstProblem(QLineEdit **field) const;
 
@@ -79,30 +78,28 @@ private:
 
     QStackedWidget *m_pages = nullptr;
     HomePage *m_home = nullptr;
-    QWidget *m_form = nullptr;
-    QFormLayout *m_fields = nullptr;
-    QComboBox *m_platform = nullptr;
-    QComboBox *m_buildType = nullptr;
+    QWidget *m_projectView = nullptr;
+    QList<QListWidget *> m_sectionLists;
+    QStackedWidget *m_sections = nullptr;
+    BuildBar *m_buildBar = nullptr;
+    QPushButton *m_saveButton = nullptr;
+
     QAction *m_build = nullptr;
+    QAction *m_save = nullptr;
     QAction *m_close = nullptr;
     QAction *m_icon = nullptr;
-    QLabel *m_iconPreview = nullptr;
-    QLineEdit *m_buildDirectory = nullptr;
-    QPushButton *m_buildReset = nullptr;
-    QLabel *m_buildWarning = nullptr;
+
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;
     QLineEdit *m_version = nullptr;
     QLineEdit *m_windowTitle = nullptr;
     QLineEdit *m_vitaTitleId = nullptr;
-    QComboBox *m_displayMode = nullptr;
-    QSpinBox *m_displayWidth = nullptr;
-    QSpinBox *m_displayHeight = nullptr;
-    QComboBox *m_displayFilter = nullptr;
-    QCheckBox *m_ownDisplay = nullptr;
+    std::array<QLabel *, s_platformCount> m_iconPreviews = {};
+    DisplayEditor *m_sharedDisplayEditor = nullptr;
+    QLabel *m_displayOverrides = nullptr;
+    std::array<PlatformDisplay, s_platformCount> m_platformDisplayEditors = {};
 
     // The form's edits to every platform's display, until they are saved.
     DisplaySettings m_sharedDisplay;
     std::array<std::optional<DisplaySettings>, s_platformCount> m_platformDisplays;
-    bool m_isShowingDisplay = false;
 };

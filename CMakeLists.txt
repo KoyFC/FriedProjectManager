@@ -16,8 +16,13 @@ qt_standard_project_setup()
 qt_add_executable(fried_project_manager
     src/build.h
     src/build.cpp
+    src/build_bar.h
+    src/build_bar.cpp
     src/command_dialog.h
     src/command_dialog.cpp
+    src/display_editor.h
+    src/display_editor.cpp
+    src/help_label.h
     src/home_page.h
     src/home_page.cpp
     src/icon.h
