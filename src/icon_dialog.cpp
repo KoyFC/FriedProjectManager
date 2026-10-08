@@ -1,6 +1,7 @@
 #include "icon_dialog.h"
 
 #include "icon.h"
+#include "image_conversion.h"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -155,14 +156,14 @@ void IconDialog::chooseFor(Platform platform)
 {
     const QString chosen =
         QFileDialog::getOpenFileName(this, QStringLiteral("Choose an icon image"), m_directory,
-                                     QStringLiteral("Images (%1)").arg(Icon::readablePatterns().join(QChar(' '))));
+                                     QStringLiteral("Images (%1)").arg(ImageConversion::readablePatterns().join(QChar(' '))));
     if (chosen.isEmpty())
     {
         return;
     }
 
     QString error;
-    const QImage source = Icon::read(chosen, &error);
+    const QImage source = ImageConversion::read(chosen, &error);
     if (source.isNull())
     {
         QMessageBox::warning(this, windowTitle(), error);

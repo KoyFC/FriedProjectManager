@@ -36,7 +36,11 @@ A project keeps one icon per platform because no single file can serve them all:
 
 Each conversion reports what it had to do to the source, because silently cropping or flattening someone's artwork is worse than saying so. A source with transparency is composited onto black for the Switch and the 3DS rather than converted, so the result does not depend on whatever colour sat under the transparent pixels.
 
-Every file is staged before any of them is committed, so a failure on the third icon leaves the first two as they were.
+Every file is staged before any of them is committed, so a failure on the third icon leaves the first two as they were. The cropping, resizing, palette reduction and staged writing live in `ImageConversion`, shared with the LiveArea images.
+
+## LiveArea images
+
+The Vita page edits `sce_sys/livearea/contents/bg.png` and `startup.png`, the two images the engine packs beside `icon0.png`. Unlike the icons they are part of the form: a chosen image waits and is written on Save, before `project.fried`, so Save, Discard and the unsaved marker treat it the way they treat a field. One the console would reject, at the wrong size or truecolor, is converted when the project opens and waits for Save the same way, rather than being reported and left broken.
 
 ## The command window
 

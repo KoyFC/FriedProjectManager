@@ -1,14 +1,8 @@
 #include "icon.h"
 
-#include <QDir>
-#include <QFileInfo>
-#include <QImageReader>
-#include <QImageWriter>
-#include <QPainter>
-#include <QSaveFile>
-#include <QSet>
+#include "image_conversion.h"
 
-#include <list>
+#include <QPainter>
 
 namespace
 {
@@ -21,7 +15,6 @@ namespace
     constexpr int s_switchIconSize = 256;
     constexpr int s_nintendo3dsIconSize = 48;
     constexpr int s_largestWindowIcon = 512;
-    constexpr int s_paletteColourLimit = 256;
 
     const char *formatOf(Platform platform)
     {
@@ -31,47 +24,12 @@ namespace
     // An icon is square wherever it is shown, so an oblong source keeps its middle.
     QImage squared(const QImage &image, QStringList *notes)
     {
-        if (image.width() == image.height())
-        {
-            return image;
-        }
-
-        const int side = qMin(image.width(), image.height());
-        *notes << QStringLiteral("Uses the centre %1x%1 square of %2x%3.").arg(side).arg(image.width()).arg(image.height());
-        return image.copy((image.width() - side) / 2, (image.height() - side) / 2, side, side);
+        return ImageConversion::cropped(image, QSize(1, 1), notes);
     }
 
-    // A console icon is one fixed size, so the source is always resized to it.
     QImage resizedTo(const QImage &square, int size, QStringList *notes)
     {
-        if (square.width() < size)
-        {
-            *notes << QStringLiteral("Enlarged from %1x%1, so it will look soft.").arg(square.width());
-        }
-        else if (square.width() > size)
-        {
-            *notes << QStringLiteral("Reduced from %1x%1.").arg(square.width());
-        }
-
-        return square.scaled(size, size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    }
-
-    int distinctColours(const QImage &image)
-    {
-        const QImage rgb = image.convertToFormat(QImage::Format_ARGB32);
-        QSet<QRgb> seen;
-        for (int y = 0; y < rgb.height(); ++y)
-        {
-            for (int x = 0; x < rgb.width(); ++x)
-            {
-                seen.insert(rgb.pixel(x, y));
-                if (seen.size() > s_paletteColourLimit)
-                {
-                    return seen.size();
-                }
-            }
-        }
-        return seen.size();
+        return ImageConversion::resized(square, QSize(size, size), notes);
     }
 
     QImage forPc(const QImage &source, QStringList *notes)
@@ -87,14 +45,7 @@ namespace
 
     QImage forVita(const QImage &source, QStringList *notes)
     {
-        const QImage resized = resizedTo(squared(source, notes), s_vitaIconSize, notes);
-        if (distinctColours(resized) > s_paletteColourLimit)
-        {
-            *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteColourLimit);
-        }
-
-        // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.
-        return resized.convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
+        return ImageConversion::palette(resizedTo(squared(source, notes), s_vitaIconSize, notes), notes);
     }
 
     // Composited rather than converted, so a transparent pixel becomes black
@@ -148,41 +99,6 @@ namespace
 
         return QStringLiteral("%1 %2x%2 truecolor").arg(Icon::path(platform)).arg(image.width());
     }
-
-    bool stage(QSaveFile &file, const QImage &image, const char *format, QString *error)
-    {
-        const QString path = QDir::toNativeSeparators(file.fileName());
-        if (!QDir().mkpath(QFileInfo(file.fileName()).path()))
-        {
-            *error = QStringLiteral("Could not create the directory for %1.").arg(path);
-            return false;
-        }
-
-        if (!file.open(QIODevice::WriteOnly))
-        {
-            *error = QStringLiteral("Could not write %1: %2").arg(path, file.errorString());
-            return false;
-        }
-
-        QImageWriter writer(&file, format);
-        if (!writer.write(image))
-        {
-            *error = QStringLiteral("Could not encode %1: %2").arg(path, writer.errorString());
-            return false;
-        }
-        return true;
-    }
-
-    bool commit(QSaveFile &file, QString *error)
-    {
-        if (file.commit())
-        {
-            return true;
-        }
-
-        *error = QStringLiteral("Could not write %1: %2").arg(QDir::toNativeSeparators(file.fileName()), file.errorString());
-        return false;
-    }
 }
 
 QString Icon::path(Platform platform)
@@ -203,32 +119,6 @@ QString Icon::path(Platform platform)
     }
 
     return s_pcPath;
-}
-
-QStringList Icon::readablePatterns()
-{
-    QStringList patterns;
-    for (const QByteArray &format : QImageReader::supportedImageFormats())
-    {
-        patterns << QStringLiteral("*.") + QString::fromUtf8(format);
-    }
-    return patterns;
-}
-
-QImage Icon::read(const QString &sourceImage, QString *error)
-{
-    QImageReader reader(sourceImage);
-
-    // A photograph straight from a camera is stored rotated.
-    reader.setAutoTransform(true);
-
-    const QImage source = reader.read();
-    if (source.isNull())
-    {
-        *error = QStringLiteral("%1 could not be read as an image: %2")
-                     .arg(QFileInfo(sourceImage).fileName(), reader.errorString());
-    }
-    return source;
 }
 
 QImage Icon::render(Platform platform, const QImage &source, QStringList *notes)
@@ -258,33 +148,12 @@ QImage Icon::render(Platform platform, const QImage &source, QStringList *notes)
 
 bool Icon::write(const QString &projectDirectory, const QMap<Platform, QImage> &icons, QString *error)
 {
-    const QDir directory(projectDirectory);
-
-    // Every file is staged before any of them is committed, so a failure replaces none.
-    std::list<QSaveFile> staged;
+    QList<ImageConversion::File> files;
     for (auto icon = icons.constBegin(); icon != icons.constEnd(); ++icon)
     {
-        if (icon.value().isNull())
-        {
-            continue;
-        }
-
-        QSaveFile &file = staged.emplace_back(directory.filePath(path(icon.key())));
-        if (!stage(file, icon.value(), formatOf(icon.key()), error))
-        {
-            return false;
-        }
+        files.append({path(icon.key()), icon.value(), formatOf(icon.key())});
     }
-
-    for (QSaveFile &file : staged)
-    {
-        if (!commit(file, error))
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return ImageConversion::write(projectDirectory, files, error);
 }
 
 QString Icon::describe(const QMap<Platform, QImage> &icons)

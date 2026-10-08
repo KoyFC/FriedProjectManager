@@ -14,9 +14,6 @@ class Icon
 public:
     static QString path(Platform platform);
 
-    // Null when the file cannot be read as an image, with the reason in error.
-    static QImage read(const QString &sourceImage, QString *error);
-
     // What that platform's file would hold, saying in notes whatever the source
     // had to become.
     static QImage render(Platform platform, const QImage &source, QStringList *notes);
@@ -24,6 +21,4 @@ public:
     // A null image leaves that platform's file as it is.
     static bool write(const QString &projectDirectory, const QMap<Platform, QImage> &icons, QString *error);
     static QString describe(const QMap<Platform, QImage> &icons);
-
-    static QStringList readablePatterns();
 };

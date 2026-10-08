@@ -8,7 +8,10 @@
 #include "home_page.h"
 #include "icon.h"
 #include "icon_dialog.h"
+#include "image_file_editor.h"
+#include "live_area.h"
 #include "new_project_dialog.h"
+#include "page_scroll_area.h"
 #include "project_template.h"
 #include "recent_projects.h"
 
@@ -30,7 +33,6 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QPushButton>
-#include <QScrollArea>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStackedWidget>
@@ -196,11 +198,7 @@ QWidget *MainWindow::newPage(const QString &title, const QString &description, Q
     layout->addStretch();
 
     // A page that outgrows the window scrolls instead of squeezing its fields.
-    QScrollArea *scroll = new QScrollArea;
-    scroll->setWidget(page);
-    scroll->setWidgetResizable(true);
-    scroll->setFrameShape(QFrame::NoFrame);
-    return scroll;
+    return new PageScrollArea(page);
 }
 
 QListWidget *MainWindow::newSectionList(QWidget *parent)
@@ -402,8 +400,37 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         content->addLayout(form);
     }
 
+    if (platform == Platform::Vita)
+    {
+        content->addWidget(buildLiveArea(parent));
+    }
+
     content->addWidget(buildPlatformDisplay(platform, parent));
     return page;
+}
+
+QWidget *MainWindow::buildLiveArea(QWidget *parent)
+{
+    QGroupBox *group = new QGroupBox(QStringLiteral("LiveArea"), parent);
+
+    QHBoxLayout *images = new QHBoxLayout;
+    for (const LiveArea::Image image : {LiveArea::Image::Background, LiveArea::Image::Startup})
+    {
+        ImageFileEditor *editor = new ImageFileEditor(
+            group, LiveArea::title(image), LiveArea::description(image), LiveArea::path(image), LiveArea::size(image),
+            [image](const QImage &source, QStringList *notes) { return LiveArea::render(image, source, notes); });
+        connect(editor, &ImageFileEditor::changed, this, &MainWindow::showUnsavedState);
+        m_imageEditors << editor;
+        images->addWidget(editor);
+    }
+    images->addStretch();
+
+    QVBoxLayout *layout = new QVBoxLayout(group);
+    layout->addWidget(helpLabel(QStringLiteral("The game's page on the Vita's home screen. Images are cut to shape, "
+                                               "resized and reduced to 256 colours, which is what the console reads."),
+                                group));
+    layout->addLayout(images);
+    return group;
 }
 
 QWidget *MainWindow::buildPlatformDisplay(Platform platform, QWidget *parent)
@@ -691,6 +718,10 @@ void MainWindow::showProject()
     showDisplays();
 
     showIcons();
+    for (ImageFileEditor *editor : std::as_const(m_imageEditors))
+    {
+        editor->setProjectDirectory(m_project.directory());
+    }
     m_buildBar->setProjectDirectory(m_project.directory());
 
     m_pages->setCurrentWidget(m_projectView);
@@ -710,7 +741,43 @@ bool MainWindow::hasUnsavedEdits() const
            || m_version->text() != m_project.version()
            || m_windowTitle->text() != m_project.windowTitle()
            || m_vitaTitleId->text() != m_project.vitaTitleId()
-           || hasUnsavedDisplay();
+           || hasUnsavedDisplay()
+           || hasUnsavedImages();
+}
+
+bool MainWindow::hasUnsavedImages() const
+{
+    for (const ImageFileEditor *editor : m_imageEditors)
+    {
+        if (editor->hasPending())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Written first, so a failure to write them leaves project.fried as it was.
+bool MainWindow::writeImages()
+{
+    QList<ImageConversion::File> files;
+    for (const ImageFileEditor *editor : std::as_const(m_imageEditors))
+    {
+        files << editor->pending();
+    }
+
+    QString error;
+    if (!ImageConversion::write(m_project.directory(), files, &error))
+    {
+        QMessageBox::warning(this, QStringLiteral("Save"), error);
+        return false;
+    }
+
+    for (ImageFileEditor *editor : std::as_const(m_imageEditors))
+    {
+        editor->pendingWritten();
+    }
+    return true;
 }
 
 void MainWindow::showUnsavedState()
@@ -807,6 +874,11 @@ bool MainWindow::saveProject()
         QMessageBox::warning(this, QStringLiteral("Save"), problem);
         invalid->setFocus();
         invalid->selectAll();
+        return false;
+    }
+
+    if (!writeImages())
+    {
         return false;
     }
 

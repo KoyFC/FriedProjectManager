@@ -11,6 +11,7 @@
 class BuildBar;
 class DisplayEditor;
 class HomePage;
+class ImageFileEditor;
 
 class QAction;
 class QCheckBox;
@@ -48,6 +49,7 @@ private:
     QWidget *buildIconsPage();
     QWidget *buildPlatformPage(Platform platform);
     QWidget *buildPlatformDisplay(Platform platform, QWidget *parent);
+    QWidget *buildLiveArea(QWidget *parent);
     QWidget *newPage(const QString &title, const QString &description, QVBoxLayout **content);
     QListWidget *newSectionList(QWidget *parent);
     void addSection(QListWidget *list, const QString &name, QWidget *page);
@@ -72,6 +74,8 @@ private:
     void platformDisplayEdited(Platform platform);
     void ownDisplayToggled(Platform platform, bool isOwn);
     bool hasUnsavedDisplay() const;
+    bool hasUnsavedImages() const;
+    bool writeImages();
     QString firstProblem(QLineEdit **field) const;
 
     Project m_project;
@@ -98,6 +102,7 @@ private:
     DisplayEditor *m_sharedDisplayEditor = nullptr;
     QLabel *m_displayOverrides = nullptr;
     std::array<PlatformDisplay, s_platformCount> m_platformDisplayEditors = {};
+    QList<ImageFileEditor *> m_imageEditors;
 
     // The form's edits to every platform's display, until they are saved.
     DisplaySettings m_sharedDisplay;

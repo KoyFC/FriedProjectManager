@@ -29,11 +29,19 @@ qt_add_executable(fried_project_manager
     src/icon.cpp
     src/icon_dialog.h
     src/icon_dialog.cpp
+    src/image_conversion.h
+    src/image_conversion.cpp
+    src/image_file_editor.h
+    src/image_file_editor.cpp
+    src/live_area.h
+    src/live_area.cpp
     src/main.cpp
     src/main_window.h
     src/main_window.cpp
     src/new_project_dialog.h
     src/new_project_dialog.cpp
+    src/page_scroll_area.h
+    src/page_scroll_area.cpp
     src/platform.h
     src/project.h
     src/project.cpp
