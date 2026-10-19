@@ -60,7 +60,7 @@ The Storage window shows what builds use outside every project, grouped by platf
 
 ## The command window
 
-One dialog runs every sequence of commands the tool issues, streaming a merged stdout and stderr into a read-only log.
+One dialog runs every sequence of commands the tool issues, streaming a merged stdout and stderr into a read-only log. The output is split into lines as bytes and each line is decoded on its own, as UTF-8 unless it is not valid UTF-8, in which case it is read in the system's code page: on Windows, MSBuild and CMake write UTF-8 while some older tools still write the code page, and splitting first keeps a character that arrives across two reads in one piece.
 
 Its colours are decided by what each line looks like, not by ANSI codes. The tools turn their own colour off when they write to a pipe rather than to a terminal, so forcing it on would mean a switch per tool and a parser for the escape sequences; recognising `error:`, `CMake Warning`, make's percentages and haxe's diagnostics covers all three tools with one set of rules. The colours come from the current palette, since a red dark enough to read on white is too dark to read on near-black.
 

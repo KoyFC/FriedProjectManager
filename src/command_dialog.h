@@ -53,9 +53,10 @@ private:
     void append(const QString &text, Line kind);
 
     // Splits a chunk of output into lines, holding back an unterminated tail.
-    void appendOutput(const QString &chunk);
+    void appendOutput(const QByteArray &chunk);
     void flushOutput();
 
+    static QString decoded(const QByteArray &line);
     static Line kindOf(const QString &line);
     static QTextCharFormat formatFor(Line kind, const QPalette &palette);
 
@@ -77,7 +78,7 @@ private:
     QString m_folderPath;
     QProcess m_process;
     QList<QStringList> m_commands;
-    QString m_pending;
+    QByteArray m_pending;
     QString m_activity;
     QTimer m_statusTick;
     QElapsedTimer m_runningFor;

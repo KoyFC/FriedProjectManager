@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QStringDecoder>
 #include <QTextCursor>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -250,22 +251,32 @@ void CommandDialog::append(const QString &text, Line kind)
 
 // A read ends wherever the pipe ran dry rather than at a line break, so the tail
 // of a chunk is usually half a line and waits for the rest of it.
-void CommandDialog::appendOutput(const QString &chunk)
+void CommandDialog::appendOutput(const QByteArray &chunk)
 {
     m_pending += chunk;
 
-    for (int newline = m_pending.indexOf(QChar('\n')); newline != -1; newline = m_pending.indexOf(QChar('\n')))
+    for (qsizetype newline = m_pending.indexOf('\n'); newline != -1; newline = m_pending.indexOf('\n'))
     {
-        QString line = m_pending.left(newline);
+        QByteArray line = m_pending.left(newline);
         m_pending.remove(0, newline + 1);
 
-        if (line.endsWith(QChar('\r')))
+        if (line.endsWith('\r'))
         {
             line.chop(1);
         }
 
-        append(line, kindOf(line));
+        const QString text = decoded(line);
+        append(text, kindOf(text));
     }
+}
+
+// Most tools write UTF-8, while some on Windows still write the system's code
+// page, so each line is read as UTF-8 unless it cannot be.
+QString CommandDialog::decoded(const QByteArray &line)
+{
+    QStringDecoder utf8(QStringDecoder::Utf8);
+    const QString text = utf8.decode(line);
+    return utf8.hasError() ? QString::fromLocal8Bit(line) : text;
 }
 
 void CommandDialog::flushOutput()
@@ -275,7 +286,8 @@ void CommandDialog::flushOutput()
         return;
     }
 
-    append(m_pending, kindOf(m_pending));
+    const QString text = decoded(m_pending);
+    append(text, kindOf(text));
     m_pending.clear();
 }
 
@@ -339,7 +351,7 @@ void CommandDialog::startFailed(QProcess::ProcessError error)
 
 void CommandDialog::readOutput()
 {
-    appendOutput(QString::fromLocal8Bit(m_process.readAll()));
+    appendOutput(m_process.readAll());
 }
 
 void CommandDialog::commandFinished(int exitCode, QProcess::ExitStatus status)
