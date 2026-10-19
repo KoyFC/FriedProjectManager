@@ -65,6 +65,7 @@ private:
     bool confirmGitNotice();
     void buildProject();
     bool downloadCompiler();
+    void showStorage();
     void chooseIcon();
     void showIcons();
     void showEngineVersion();

@@ -21,6 +21,7 @@ signals:
     void projectChosen(const QString &directory);
     void newProjectRequested();
     void openProjectRequested();
+    void storageRequested();
 
 private:
     void openSelected();

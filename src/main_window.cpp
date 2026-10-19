@@ -4,6 +4,7 @@
 #include "build_bar.h"
 #include "command_dialog.h"
 #include "display_editor.h"
+#include "storage_dialog.h"
 #include "engine_version.h"
 #include "engine_version_dialog.h"
 #include "help_label.h"
@@ -113,6 +114,7 @@ void MainWindow::buildPages()
     connect(m_home, &HomePage::projectChosen, this, &MainWindow::openProject);
     connect(m_home, &HomePage::newProjectRequested, this, &MainWindow::newProject);
     connect(m_home, &HomePage::openProjectRequested, this, &MainWindow::chooseProject);
+    connect(m_home, &HomePage::storageRequested, this, &MainWindow::showStorage);
 
     m_projectView = buildProjectView();
 
@@ -983,6 +985,12 @@ void MainWindow::changeEngineVersion()
     showEngineVersion();
     statusBar()->showMessage(change.succeeded() ? QStringLiteral("Engine switched to %1").arg(version.name)
                                                 : QStringLiteral("Engine was not switched to %1").arg(version.name));
+}
+
+void MainWindow::showStorage()
+{
+    StorageDialog storage(this);
+    storage.exec();
 }
 
 bool MainWindow::downloadCompiler()

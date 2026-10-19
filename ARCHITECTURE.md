@@ -54,6 +54,10 @@ The Vita page edits `sce_sys/livearea/contents/bg.png` and `startup.png`, the tw
 
 The engine page reads the submodule's checkout and nothing else: which commit `engine/` sits on is the project's repository's to record, so the tool keeps no version of its own in `project.fried` or in its settings. The versions offered are whatever `git ls-remote` lists for the submodule's `origin`, branches first with `main` at the top, then tags newest first, so a branch or tag pushed to the engine repository shows up without the tool knowing about it. Switching fetches that one reference and checks out `FETCH_HEAD` detached, which is the state a submodule is always in, rather than relying on the submodule having fetched every branch before. `GIT_TERMINAL_PROMPT=0` keeps a remote that wants credentials from waiting on a terminal the tool never shows.
 
+## Storage
+
+The Storage window shows what lives outside every project and grows with each engine version: the dependency sources the engine's PC builds unpack into its `FRIED_DEPS_CACHE`, and the tool's own w64devkit. The tool finds the cache where the engine puts it by default, worked out the same way `cmake/PcDependencies.cmake` does, so a cache moved with `-DFRIED_DEPS_CACHE` is not listed. A source folder without the engine's `.fried-unpacked` marker is shown as incomplete, which is how the engine sees it too. Deleting is always safe, because both the engine and the tool fetch whatever is missing on the next build, and sizes are measured each time the window opens rather than remembered.
+
 ## The command window
 
 One dialog runs every sequence of commands the tool issues, streaming a merged stdout and stderr into a read-only log.

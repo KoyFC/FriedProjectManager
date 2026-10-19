@@ -118,8 +118,18 @@ HomePage::HomePage(QWidget *parent)
     buttons->addWidget(create);
     buttons->addWidget(browse);
 
+    QPushButton *storage = new QPushButton(QStringLiteral("Storage..."), this);
+    storage->setToolTip(QStringLiteral("What builds have downloaded outside the projects, and how much space it "
+                                         "takes."));
+    connect(storage, &QPushButton::clicked, this, &HomePage::storageRequested);
+
+    QHBoxLayout *header = new QHBoxLayout;
+    header->addWidget(heading);
+    header->addStretch();
+    header->addWidget(storage);
+
     QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->addWidget(heading);
+    layout->addLayout(header);
     layout->addWidget(m_area, 1);
     layout->addLayout(buttons);
 }
