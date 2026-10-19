@@ -18,6 +18,7 @@
 #include "page_scroll_area.h"
 #include "project_template.h"
 #include "recent_projects.h"
+#include "windows_toolchain.h"
 
 #include <QCheckBox>
 #include <QDir>
@@ -924,6 +925,11 @@ void MainWindow::buildProject()
     const BuildTarget target = m_buildBar->target();
     const Build::Type type = m_buildBar->type();
 
+    if (Build::needsCompilerDownload(target) && !downloadCompiler())
+    {
+        return;
+    }
+
     QString error;
     const QList<QStringList> commands =
         Build::commands(target, type, m_project.directory(), m_buildBar->directory(), &error);
@@ -935,6 +941,7 @@ void MainWindow::buildProject()
 
     CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(buildTargetName(target), Build::name(type)),
                         m_project.directory(), commands);
+    build.setEnvironment(Build::environment(target));
     build.setActivity(QStringLiteral("Compiling"));
     build.offerToOpen(QStringLiteral("Open Build Folder"), QDir(m_project.directory()).filePath(m_buildBar->directory()));
     build.exec();
@@ -976,6 +983,38 @@ void MainWindow::changeEngineVersion()
     showEngineVersion();
     statusBar()->showMessage(change.succeeded() ? QStringLiteral("Engine switched to %1").arg(version.name)
                                                 : QStringLiteral("Engine was not switched to %1").arg(version.name));
+}
+
+bool MainWindow::downloadCompiler()
+{
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, QStringLiteral("C++ Compiler"),
+        QStringLiteral("Building for PC needs a C++ compiler, and Visual Studio's C++ tools are not installed.\n\n"
+                       "The Project Manager can download w64devkit, which brings GCC, CMake and Ninja in about 70 "
+                       "MB, into %1 and build with it from then on. Download it now?")
+            .arg(QDir::toNativeSeparators(WindowsToolchain::w64devkitDirectory())));
+    if (answer != QMessageBox::Yes)
+    {
+        return false;
+    }
+
+    CommandDialog download(this, QStringLiteral("Download w64devkit"), m_project.directory(),
+                           WindowsToolchain::beginInstall());
+    download.setActivity(QStringLiteral("Downloading"));
+    download.exec();
+
+    QString error;
+    if (!WindowsToolchain::finishInstall(download.succeeded(), &error))
+    {
+        // A download that failed already said why in its own window.
+        if (download.succeeded())
+        {
+            QMessageBox::warning(this, QStringLiteral("C++ Compiler"), error);
+        }
+        return false;
+    }
+
+    return true;
 }
 
 QString MainWindow::firstProblem(QLineEdit **field) const

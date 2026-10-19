@@ -95,6 +95,11 @@ void CommandDialog::offerToOpen(const QString &label, const QString &directory)
             [this] { QDesktopServices::openUrl(QUrl::fromLocalFile(m_folderPath)); });
 }
 
+void CommandDialog::setEnvironment(const QProcessEnvironment &environment)
+{
+    m_process.setProcessEnvironment(environment);
+}
+
 void CommandDialog::setActivity(const QString &activity)
 {
     m_activity = activity;

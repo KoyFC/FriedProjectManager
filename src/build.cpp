@@ -1,5 +1,7 @@
 #include "build.h"
 
+#include "windows_toolchain.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
@@ -125,11 +127,12 @@ namespace
         return file;
     }
 
-    QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras)
+    QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras,
+                                const QString &cmake = QStringLiteral("cmake"))
     {
         const QString typeName = Build::name(type);
 
-        QStringList configure = {QStringLiteral("cmake"), QStringLiteral("-S"), QStringLiteral("."),
+        QStringList configure = {cmake, QStringLiteral("-S"), QStringLiteral("."),
                                  QStringLiteral("-B"), buildTree,
                                  QStringLiteral("-DCMAKE_BUILD_TYPE=%1").arg(typeName)};
         configure += configureExtras;
@@ -138,10 +141,54 @@ namespace
             {QStringLiteral("haxe"), QStringLiteral("build.hxml")},
             configure,
             // A generator that holds every configuration at once ignores the variable and reads --config
-            {QStringLiteral("cmake"), QStringLiteral("--build"), buildTree, QStringLiteral("--config"), typeName,
+            {cmake, QStringLiteral("--build"), buildTree, QStringLiteral("--config"), typeName,
              QStringLiteral("--parallel")},
         };
     }
+
+#ifdef Q_OS_WIN
+    QList<QStringList> windowsPipeline(const QString &buildTree, Build::Type type, QString *error)
+    {
+        const QString visualStudioCmake = WindowsToolchain::visualStudioCmake();
+        if (!visualStudioCmake.isEmpty())
+        {
+            return pipeline(buildTree, type, {}, visualStudioCmake);
+        }
+
+        if (WindowsToolchain::w64devkitInstalled())
+        {
+            return WindowsToolchain::w64devkitPipeline(buildTree, Build::name(type));
+        }
+
+        *error = QStringLiteral("There is no C++ compiler to build with: Visual Studio's C++ tools are not "
+                                "installed, and neither is w64devkit.");
+        return {};
+    }
+#endif
+}
+
+bool Build::needsCompilerDownload(BuildTarget target)
+{
+#ifdef Q_OS_WIN
+    return target == BuildTarget::Pc && WindowsToolchain::visualStudioCmake().isEmpty()
+           && !WindowsToolchain::w64devkitInstalled();
+#else
+    Q_UNUSED(target);
+    return false;
+#endif
+}
+
+QProcessEnvironment Build::environment(BuildTarget target)
+{
+#ifdef Q_OS_WIN
+    if (target == BuildTarget::Pc && WindowsToolchain::visualStudioCmake().isEmpty())
+    {
+        return WindowsToolchain::w64devkitEnvironment();
+    }
+#else
+    Q_UNUSED(target);
+#endif
+    return QProcessEnvironment::systemEnvironment();
 }
 
 QString Build::defaultDirectory(BuildTarget target)
@@ -177,7 +224,11 @@ QList<QStringList> Build::commands(BuildTarget target, Type type, const QString 
     switch (target)
     {
     case BuildTarget::Pc:
+#ifdef Q_OS_WIN
+        return windowsPipeline(buildDirectory, type, error);
+#else
         return pipeline(buildDirectory, type, {});
+#endif
     case BuildTarget::WindowsFromHost:
         toolchain = mingwToolchainFile(projectDirectory, error);
         break;

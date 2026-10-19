@@ -30,6 +30,12 @@ The build directory and build type are remembered per project and per target, so
 
 VitaSDK's packaging step does not quote the paths it is handed, so a space anywhere in a Vita project's path lets it compile but not be packaged. New Project avoids it by putting `My Demo Game` in `My-Demo-Game` while the project keeps the name as typed, and the build form warns when a path it cannot rename has one. `elf2nro` quotes its arguments, so the Switch needs none of this.
 
+## A compiler on Windows
+
+On Windows a PC build needs a C++ compiler that the tool can reach without a terminal set up for it. Visual Studio is found through `vswhere`, which its installer always places in the same folder, and drives itself once CMake picks its generator, so a CMake is all the build needs from it: the one on the `PATH`, or the one the C++ workload installs inside Visual Studio. Without Visual Studio, the tool keeps a w64devkit of its own in its local data folder rather than asking for one on the `PATH`, since w64devkit is made to be used from the terminal it opens and nothing else sees it. Its version and SHA-256 are fixed in the tool, so every machine builds with the same GCC.
+
+The download runs in the command window like any build, as three commands: `curl.exe` and PowerShell's `Get-FileHash`, both part of Windows 10 and later, and the archive itself, a 7-Zip self-extractor that unpacks without asking when given `-y`. It unpacks into a folder of its own and is moved into place only once it is complete, so a download that was stopped never looks installed. Its tools are named by absolute path, and its `bin/` is put first on the `PATH` of the processes the build starts, for whatever CMake and GCC look up there.
+
 ## Icons
 
 A project keeps one icon per platform because no single file can serve them all: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, a `.nro` carries a 256x256 JPEG, a `.3dsx` a 48x48 icon with no transparency, and a `.g3a` two 92x64 ones, its menu icon unselected and selected. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.

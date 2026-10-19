@@ -58,6 +58,8 @@ qt_add_executable(fried_project_manager
     src/project_template.cpp
     src/recent_projects.h
     src/recent_projects.cpp
+    src/windows_toolchain.h
+    src/windows_toolchain.cpp
 )
 
 # Without this the tool opens a console window beside itself on Windows

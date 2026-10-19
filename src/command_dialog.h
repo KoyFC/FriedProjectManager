@@ -23,6 +23,8 @@ public:
     // Adds a button that opens this directory, for when the commands leave something to look at.
     void offerToOpen(const QString &label, const QString &directory);
 
+    void setEnvironment(const QProcessEnvironment &environment);
+
     // What the commands are doing, for the line that reports they still are.
     void setActivity(const QString &activity);
 
