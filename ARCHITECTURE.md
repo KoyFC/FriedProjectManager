@@ -64,7 +64,7 @@ The log is written with a text cursor rather than as HTML, because HTML would ha
 
 A read of the pipe ends wherever it ran dry rather than at a line break, so the tail of a chunk is held back until the rest of its line arrives. Without that, colouring per line would split one line into two of different colours.
 
-The activity the dialog reports is set by whoever opens it, so the build window says `Compiling` while the one running `git` does not claim to be compiling.
+The activity the dialog reports is set by whoever opens it, so the build window says `Compiling` while the one running `git` does not claim to be compiling. Beside it runs the time since the window opened, which becomes `Completed in` or `Failed after` that time once the commands end. It sits in a label of its own, wide enough for minutes and seconds, so neither the dots nor the clock nudge the other.
 
 ## Settings
 

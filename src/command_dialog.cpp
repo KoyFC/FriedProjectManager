@@ -4,6 +4,7 @@
 #include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -35,8 +36,8 @@ namespace
     constexpr int s_statusTickMs = 400;
     constexpr int s_mostDots = 3;
 
-    const QString s_finishedStatus = QStringLiteral("Done.");
-    const QString s_failedStatus = QStringLiteral("Failed.");
+    // As wide as the elapsed time gets in practice, so it does not nudge the status beside it.
+    const QString s_widestElapsed = QStringLiteral("88m 88s");
 }
 
 CommandDialog::CommandDialog(QWidget *parent, const QString &title, const QString &workingDirectory,
@@ -56,13 +57,22 @@ CommandDialog::CommandDialog(QWidget *parent, const QString &title, const QStrin
     m_status = new QLabel(this);
     m_status->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
+    m_elapsed = new QLabel(this);
+    m_elapsed->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_elapsed->setMinimumWidth(m_elapsed->fontMetrics().horizontalAdvance(s_widestElapsed));
+
     m_buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
     m_button = m_buttons->button(QDialogButtonBox::Close);
     m_button->setText(QStringLiteral("Cancel"));
 
     QVBoxLayout *column = new QVBoxLayout(this);
     column->addWidget(m_output);
-    column->addWidget(m_status, 0, Qt::AlignHCenter);
+    QHBoxLayout *statusRow = new QHBoxLayout;
+    statusRow->addStretch();
+    statusRow->addWidget(m_status);
+    statusRow->addWidget(m_elapsed);
+    statusRow->addStretch();
+    column->addLayout(statusRow);
     column->addWidget(m_buttons);
 
     m_activity = QStringLiteral("Working");
@@ -72,6 +82,7 @@ CommandDialog::CommandDialog(QWidget *parent, const QString &title, const QStrin
     m_statusTick.setInterval(s_statusTickMs);
     connect(&m_statusTick, &QTimer::timeout, this, &CommandDialog::tickStatus);
     m_statusTick.start();
+    m_runningFor.start();
 
     m_process.setWorkingDirectory(workingDirectory);
     m_process.setProcessChannelMode(QProcess::MergedChannels);
@@ -115,23 +126,33 @@ void CommandDialog::setActivity(const QString &activity)
 void CommandDialog::reserveStatusWidth()
 {
     const QFontMetrics metrics = m_status->fontMetrics();
-    int widest = metrics.horizontalAdvance(m_activity + QString(s_mostDots, QChar('.')));
-    widest = qMax(widest, metrics.horizontalAdvance(s_finishedStatus));
-    widest = qMax(widest, metrics.horizontalAdvance(s_failedStatus));
-
-    m_status->setMinimumWidth(widest);
+    m_status->setMinimumWidth(metrics.horizontalAdvance(m_activity + QString(s_mostDots, QChar('.'))));
 }
 
 void CommandDialog::showStatus(const QString &text, Line kind)
 {
     m_status->setText(text);
-    m_status->setStyleSheet(
-        QStringLiteral("color: %1").arg(formatFor(kind, m_output->palette()).foreground().color().name()));
+    const QString colour =
+        QStringLiteral("color: %1").arg(formatFor(kind, m_output->palette()).foreground().color().name());
+    m_status->setStyleSheet(colour);
+    m_elapsed->setStyleSheet(colour);
 }
 
 void CommandDialog::showRunning()
 {
     showStatus(m_activity + QString(m_dots, QChar('.')), Line::Progress);
+    m_elapsed->setText(elapsedText());
+}
+
+QString CommandDialog::elapsedText() const
+{
+    const qint64 seconds = m_runningFor.elapsed() / 1000;
+    if (seconds < 60)
+    {
+        return QStringLiteral("%1s").arg(seconds);
+    }
+
+    return QStringLiteral("%1m %2s").arg(seconds / 60).arg(seconds % 60, 2, 10, QChar('0'));
 }
 
 void CommandDialog::tickStatus()
@@ -263,7 +284,7 @@ void CommandDialog::runNext()
     if (m_next == m_commands.size())
     {
         m_succeeded = true;
-        finish(QStringLiteral("\nDone."), Line::Success);
+        finish(QStringLiteral("\nCompleted in %1.").arg(elapsedText()), Line::Success);
         return;
     }
 
@@ -277,7 +298,10 @@ void CommandDialog::runNext()
 void CommandDialog::finish(const QString &message, Line kind)
 {
     m_statusTick.stop();
-    showStatus(kind == Line::Success ? s_finishedStatus : s_failedStatus, kind);
+    m_elapsed->hide();
+    showStatus((kind == Line::Success ? QStringLiteral("Completed in %1") : QStringLiteral("Failed after %1"))
+                   .arg(elapsedText()),
+               kind);
 
     m_button->setText(QStringLiteral("Close"));
     append(message, kind);

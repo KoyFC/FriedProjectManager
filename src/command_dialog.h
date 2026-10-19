@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include <QElapsedTimer>
 #include <QList>
 #include <QProcess>
 #include <QStringList>
@@ -61,6 +62,7 @@ private:
     void showStatus(const QString &text, Line kind);
     void showRunning();
     void tickStatus();
+    QString elapsedText() const;
 
     // Wide enough for the longest status it will ever hold, so the text does not
     // move as the dots come and go.
@@ -68,6 +70,7 @@ private:
 
     QPlainTextEdit *m_output = nullptr;
     QLabel *m_status = nullptr;
+    QLabel *m_elapsed = nullptr;
     QDialogButtonBox *m_buttons = nullptr;
     QPushButton *m_button = nullptr;
     QPushButton *m_folder = nullptr;
@@ -77,6 +80,7 @@ private:
     QString m_pending;
     QString m_activity;
     QTimer m_statusTick;
+    QElapsedTimer m_runningFor;
     int m_dots = 0;
     int m_next = 0;
     bool m_succeeded = false;
