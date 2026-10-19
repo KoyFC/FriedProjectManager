@@ -23,8 +23,6 @@ qt_add_executable(fried_project_manager
     src/command_dialog.cpp
     src/display_editor.h
     src/display_editor.cpp
-    src/downloads.h
-    src/downloads.cpp
     src/engine_version.h
     src/engine_version.cpp
     src/engine_version_dialog.h
@@ -60,6 +58,8 @@ qt_add_executable(fried_project_manager
     src/project_template.cpp
     src/recent_projects.h
     src/recent_projects.cpp
+    src/storage.h
+    src/storage.cpp
     src/storage_dialog.h
     src/storage_dialog.cpp
     src/windows_toolchain.h
