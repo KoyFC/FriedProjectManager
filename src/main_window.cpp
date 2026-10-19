@@ -4,6 +4,8 @@
 #include "build_bar.h"
 #include "command_dialog.h"
 #include "display_editor.h"
+#include "engine_version.h"
+#include "engine_version_dialog.h"
 #include "help_label.h"
 #include "home_page.h"
 #include "icon.h"
@@ -137,6 +139,7 @@ QWidget *MainWindow::buildProjectView()
     addSection(project, QStringLiteral("General"), buildGeneralPage());
     addSection(project, QStringLiteral("Display"), buildDisplayPage());
     addSection(project, QStringLiteral("Icons"), buildIconsPage());
+    addSection(project, QStringLiteral("Engine"), buildEnginePage());
 
     QListWidget *platforms = newSectionList(panel);
     for (const Platform platform : s_platforms)
@@ -344,6 +347,29 @@ QWidget *MainWindow::buildDisplayPage()
     content->addWidget(m_sharedDisplayEditor);
     content->addSpacing(m_displayOverrides->fontMetrics().lineSpacing());
     content->addWidget(m_displayOverrides);
+    return page;
+}
+
+QWidget *MainWindow::buildEnginePage()
+{
+    QVBoxLayout *content = nullptr;
+    QWidget *page = newPage(QStringLiteral("Engine"),
+                            QStringLiteral("The version of Fried Engine the project builds with, checked out in its "
+                                           "engine submodule."),
+                            &content);
+    QWidget *parent = content->parentWidget();
+
+    m_engineVersion = new QLabel(parent);
+    m_engineVersion->setWordWrap(true);
+    m_engineVersion->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    m_changeEngineVersion = new QPushButton(QStringLiteral("Change Version..."), parent);
+    connect(m_changeEngineVersion, &QPushButton::clicked, this, &MainWindow::changeEngineVersion);
+
+    QFormLayout *form = new QFormLayout;
+    form->addRow(QStringLiteral("Checked out"), m_engineVersion);
+    content->addLayout(form);
+    content->addWidget(m_changeEngineVersion, 0, Qt::AlignLeft);
     return page;
 }
 
@@ -778,6 +804,7 @@ void MainWindow::showProject()
     }
     m_liveAreaTemplate->setProjectDirectory(m_project.directory());
     m_buildBar->setProjectDirectory(m_project.directory());
+    showEngineVersion();
 
     m_pages->setCurrentWidget(m_projectView);
     m_build->setEnabled(true);
@@ -915,6 +942,40 @@ void MainWindow::buildProject()
     statusBar()->showMessage(build.succeeded()
                                  ? QStringLiteral("Built %1 for %2").arg(m_project.name(), buildTargetName(target))
                                  : QStringLiteral("Build for %1 did not finish").arg(buildTargetName(target)));
+}
+
+void MainWindow::showEngineVersion()
+{
+    const bool hasEngine = EngineSubmodule::exists(m_project.directory());
+    m_changeEngineVersion->setEnabled(hasEngine);
+
+    if (!hasEngine)
+    {
+        m_engineVersion->setText(QStringLiteral("Nothing: the project has no engine submodule at engine/."));
+        return;
+    }
+
+    const QString description = EngineSubmodule::currentDescription(m_project.directory());
+    m_engineVersion->setText(description.isEmpty() ? QStringLiteral("A checkout git could not read.") : description);
+}
+
+void MainWindow::changeEngineVersion()
+{
+    EngineVersionDialog choose(this, m_project.directory());
+    if (choose.exec() != QDialog::Accepted)
+    {
+        return;
+    }
+
+    const EngineVersion version = choose.chosenVersion();
+    CommandDialog change(this, QStringLiteral("Switch Engine to %1").arg(version.name),
+                         EngineSubmodule::directory(m_project.directory()), EngineSubmodule::switchCommands(version));
+    change.setActivity(QStringLiteral("Switching"));
+    change.exec();
+
+    showEngineVersion();
+    statusBar()->showMessage(change.succeeded() ? QStringLiteral("Engine switched to %1").arg(version.name)
+                                                : QStringLiteral("Engine was not switched to %1").arg(version.name));
 }
 
 QString MainWindow::firstProblem(QLineEdit **field) const

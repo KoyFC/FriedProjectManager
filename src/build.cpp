@@ -79,6 +79,22 @@ namespace
         return file;
     }
 
+    // A game holds the engine as its engine/ submodule, while the engine's own
+    // sandbox sits inside the engine. Empty when neither is there.
+    QString engineDirectoryOf(const QString &projectDirectory)
+    {
+        const QDir project(projectDirectory);
+        for (const QString &candidate : {project.filePath(QStringLiteral("engine")), project.filePath(QStringLiteral(".."))})
+        {
+            if (QFileInfo::exists(QDir(candidate).filePath(QStringLiteral("cmake/FriedEngine.cmake"))))
+            {
+                return QDir::cleanPath(candidate);
+            }
+        }
+
+        return {};
+    }
+
     // The engine ships this toolchain itself, so only the cross compiler has to be installed.
     QString mingwToolchainFile(const QString &projectDirectory, QString *error)
     {
@@ -89,7 +105,15 @@ namespace
             return {};
         }
 
-        const QString file = QDir(projectDirectory).filePath(QStringLiteral("engine/cmake/toolchains/mingw-w64.cmake"));
+        const QString engine = engineDirectoryOf(projectDirectory);
+        if (engine.isEmpty())
+        {
+            *error = QStringLiteral("There is no Fried Engine in the project's engine/ submodule, so there is no "
+                                    "MinGW-w64 toolchain to build for Windows with.");
+            return {};
+        }
+
+        const QString file = QDir(engine).filePath(QStringLiteral("cmake/toolchains/mingw-w64.cmake"));
         if (!QFileInfo::exists(file))
         {
             *error = QStringLiteral("The project's engine has no MinGW-w64 toolchain at %1. Updating the engine "

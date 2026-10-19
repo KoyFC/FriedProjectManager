@@ -23,6 +23,10 @@ qt_add_executable(fried_project_manager
     src/command_dialog.cpp
     src/display_editor.h
     src/display_editor.cpp
+    src/engine_version.h
+    src/engine_version.cpp
+    src/engine_version_dialog.h
+    src/engine_version_dialog.cpp
     src/help_label.h
     src/home_page.h
     src/home_page.cpp
