@@ -16,6 +16,7 @@ qt_standard_project_setup()
 qt_add_executable(fried_project_manager
     src/build.h
     src/build.cpp
+    src/build_target.h
     src/build_bar.h
     src/build_bar.cpp
     src/command_dialog.h

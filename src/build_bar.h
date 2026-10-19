@@ -10,7 +10,7 @@ class QLabel;
 class QLineEdit;
 class QPushButton;
 
-// What to build and where, remembered per project and per platform.
+// What to build and where, remembered per project and per target.
 class BuildBar : public QWidget
 {
     Q_OBJECT
@@ -21,7 +21,7 @@ public:
     // An empty directory means no project is open, and nothing is remembered.
     void setProjectDirectory(const QString &directory);
 
-    Platform platform() const;
+    BuildTarget target() const;
     Build::Type type() const;
 
     // Relative to the project, unless it was given as an absolute path.
@@ -41,7 +41,7 @@ private:
 
     QString m_projectDirectory;
 
-    QComboBox *m_platform = nullptr;
+    QComboBox *m_target = nullptr;
     QComboBox *m_type = nullptr;
     QLineEdit *m_directory = nullptr;
     QPushButton *m_reset = nullptr;

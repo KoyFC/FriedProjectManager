@@ -20,41 +20,36 @@ namespace
     // whichever side of the project it points at.
     const QString s_projectToken = QStringLiteral("{project}");
 
-    int comboIndexOf(Platform platform)
-    {
-        return static_cast<int>(platform);
-    }
-
     int comboIndexOf(Build::Type type)
     {
         return static_cast<int>(type);
     }
 
     // A project path holds separators, so it is percent encoded to stay one key.
-    QString rememberedKey(const QString &setting, const QString &project, Platform platform)
+    QString rememberedKey(const QString &setting, const QString &project, BuildTarget target)
     {
         return QStringLiteral("%1/%2/%3")
-            .arg(setting, platformKey(platform), QString::fromUtf8(QUrl::toPercentEncoding(project)));
+            .arg(setting, buildTargetKey(target), QString::fromUtf8(QUrl::toPercentEncoding(project)));
     }
 
-    QString directoryKey(const QString &project, Platform platform)
+    QString directoryKey(const QString &project, BuildTarget target)
     {
-        return rememberedKey(QStringLiteral("buildDirectories"), project, platform);
+        return rememberedKey(QStringLiteral("buildDirectories"), project, target);
     }
 
-    QString typeKey(const QString &project, Platform platform)
+    QString typeKey(const QString &project, BuildTarget target)
     {
-        return rememberedKey(QStringLiteral("buildTypes"), project, platform);
+        return rememberedKey(QStringLiteral("buildTypes"), project, target);
     }
 }
 
 BuildBar::BuildBar(QWidget *parent, QAction *build)
     : QWidget(parent)
 {
-    m_platform = new QComboBox(this);
-    for (int index = 0; index < s_platformCount; ++index)
+    m_target = new QComboBox(this);
+    for (BuildTarget target : buildTargets())
     {
-        m_platform->insertItem(index, platformName(static_cast<Platform>(index)));
+        m_target->addItem(buildTargetName(target), static_cast<int>(target));
     }
 
     m_type = new QComboBox(this);
@@ -69,7 +64,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     QPushButton *browse = new QPushButton(QStringLiteral("Browse..."), this);
 
     m_reset = new QPushButton(QStringLiteral("Reset"), this);
-    m_reset->setToolTip(QStringLiteral("Back to where the chosen platform builds by default."));
+    m_reset->setToolTip(QStringLiteral("Back to where the chosen target builds by default."));
 
     QToolButton *buildButton = new QToolButton(this);
     buildButton->setDefaultAction(build);
@@ -80,7 +75,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     m_warning->hide();
 
     QHBoxLayout *controls = new QHBoxLayout;
-    controls->addWidget(m_platform);
+    controls->addWidget(m_target);
     controls->addWidget(m_type);
     controls->addWidget(m_directory, 1);
     controls->addWidget(browse);
@@ -91,7 +86,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     layout->addWidget(m_warning);
     layout->addLayout(controls);
 
-    connect(m_platform, &QComboBox::currentIndexChanged, this, &BuildBar::showRemembered);
+    connect(m_target, &QComboBox::currentIndexChanged, this, &BuildBar::showRemembered);
     connect(m_type, &QComboBox::currentIndexChanged, this, &BuildBar::rememberType);
     connect(browse, &QPushButton::clicked, this, &BuildBar::chooseDirectory);
     connect(m_reset, &QPushButton::clicked, this, &BuildBar::resetDirectory);
@@ -105,9 +100,9 @@ void BuildBar::setProjectDirectory(const QString &directory)
     showRemembered();
 }
 
-Platform BuildBar::platform() const
+BuildTarget BuildBar::target() const
 {
-    return static_cast<Platform>(m_platform->currentIndex());
+    return static_cast<BuildTarget>(m_target->currentData().toInt());
 }
 
 Build::Type BuildBar::type() const
@@ -142,16 +137,16 @@ void BuildBar::showRemembered()
 {
     QSettings settings;
     const QString type =
-        settings.value(typeKey(m_projectDirectory, platform()), Build::name(Build::Type::Debug)).toString();
+        settings.value(typeKey(m_projectDirectory, target()), Build::name(Build::Type::Debug)).toString();
     const QString directory =
-        settings.value(directoryKey(m_projectDirectory, platform()), Build::defaultDirectory(platform())).toString();
+        settings.value(directoryKey(m_projectDirectory, target()), Build::defaultDirectory(target())).toString();
 
     // Showing what was remembered is not a choice, so it stores nothing.
     const QSignalBlocker blocker(m_type);
     m_type->setCurrentIndex(comboIndexOf(Build::typeNamed(type)));
     showDirectory(directory);
 
-    // The text may not have changed, but the platform it is checked against has.
+    // The text may not have changed, but the target it is checked against has.
     directoryChanged();
 }
 
@@ -165,7 +160,7 @@ void BuildBar::directoryChanged()
 {
     const QString chosen = directory();
     m_directory->setToolTip(QDir(m_projectDirectory).filePath(chosen));
-    m_reset->setEnabled(chosen != Build::defaultDirectory(platform()));
+    m_reset->setEnabled(chosen != Build::defaultDirectory(target()));
 
     const QString problem = vitaSpaceProblem();
     m_warning->setText(problem);
@@ -190,7 +185,7 @@ void BuildBar::chooseDirectory()
 
 void BuildBar::resetDirectory()
 {
-    showDirectory(Build::defaultDirectory(platform()));
+    showDirectory(Build::defaultDirectory(target()));
     rememberDirectory();
 }
 
@@ -202,7 +197,7 @@ void BuildBar::rememberType()
     }
 
     QSettings settings;
-    settings.setValue(typeKey(m_projectDirectory, platform()), Build::name(type()));
+    settings.setValue(typeKey(m_projectDirectory, target()), Build::name(type()));
 }
 
 void BuildBar::rememberDirectory()
@@ -213,13 +208,13 @@ void BuildBar::rememberDirectory()
     }
 
     QSettings settings;
-    settings.setValue(directoryKey(m_projectDirectory, platform()), directory());
+    settings.setValue(directoryKey(m_projectDirectory, target()), directory());
 }
 
 // VitaSDK hands vita-pack-vpk every path unquoted, so a space splits an argument.
 QString BuildBar::vitaSpaceProblem() const
 {
-    if (platform() != Platform::Vita)
+    if (target() != BuildTarget::Vita)
     {
         return QString();
     }

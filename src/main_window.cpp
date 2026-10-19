@@ -894,26 +894,27 @@ void MainWindow::buildProject()
 
     m_buildBar->remember();
 
-    const Platform platform = m_buildBar->platform();
+    const BuildTarget target = m_buildBar->target();
     const Build::Type type = m_buildBar->type();
 
     QString error;
-    const QList<QStringList> commands = Build::commands(platform, type, m_buildBar->directory(), &error);
+    const QList<QStringList> commands =
+        Build::commands(target, type, m_project.directory(), m_buildBar->directory(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);
         return;
     }
 
-    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(platformName(platform), Build::name(type)),
+    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(buildTargetName(target), Build::name(type)),
                         m_project.directory(), commands);
     build.setActivity(QStringLiteral("Compiling"));
     build.offerToOpen(QStringLiteral("Open Build Folder"), QDir(m_project.directory()).filePath(m_buildBar->directory()));
     build.exec();
 
     statusBar()->showMessage(build.succeeded()
-                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), platformName(platform))
-                                 : QStringLiteral("Build for %1 did not finish").arg(platformName(platform)));
+                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), buildTargetName(target))
+                                 : QStringLiteral("Build for %1 did not finish").arg(buildTargetName(target)));
 }
 
 QString MainWindow::firstProblem(QLineEdit **field) const

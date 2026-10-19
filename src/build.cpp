@@ -79,6 +79,28 @@ namespace
         return file;
     }
 
+    // The engine ships this toolchain itself, so only the cross compiler has to be installed.
+    QString mingwToolchainFile(const QString &projectDirectory, QString *error)
+    {
+        if (QStandardPaths::findExecutable(QStringLiteral("x86_64-w64-mingw32-g++")).isEmpty())
+        {
+            *error = QStringLiteral("x86_64-w64-mingw32-g++ is not on the PATH, so there is no MinGW-w64 compiler to "
+                                    "build for Windows with.");
+            return {};
+        }
+
+        const QString file = QDir(projectDirectory).filePath(QStringLiteral("engine/cmake/toolchains/mingw-w64.cmake"));
+        if (!QFileInfo::exists(file))
+        {
+            *error = QStringLiteral("The project's engine has no MinGW-w64 toolchain at %1. Updating the engine "
+                                    "submodule brings it.")
+                         .arg(QDir::toNativeSeparators(file));
+            return {};
+        }
+
+        return file;
+    }
+
     QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras)
     {
         const QString typeName = Build::name(type);
@@ -98,29 +120,14 @@ namespace
     }
 }
 
-QString Build::defaultDirectory(Platform platform)
+QString Build::defaultDirectory(BuildTarget target)
 {
-    if (platform == Platform::Vita)
+    if (target == BuildTarget::Pc)
     {
-        return QStringLiteral("build/vita");
+        return QStringLiteral("build");
     }
 
-    if (platform == Platform::Switch)
-    {
-        return QStringLiteral("build/switch");
-    }
-
-    if (platform == Platform::Nintendo3ds)
-    {
-        return QStringLiteral("build/3ds");
-    }
-
-    if (platform == Platform::Cg50)
-    {
-        return QStringLiteral("build/cg50");
-    }
-
-    return QStringLiteral("build");
+    return QStringLiteral("build/%1").arg(buildTargetKey(target));
 }
 
 QString Build::name(Type type)
@@ -133,7 +140,8 @@ Build::Type Build::typeNamed(const QString &name)
     return name == Build::name(Type::Release) ? Type::Release : Type::Debug;
 }
 
-QList<QStringList> Build::commands(Platform platform, Type type, const QString &buildDirectory, QString *error)
+QList<QStringList> Build::commands(BuildTarget target, Type type, const QString &projectDirectory,
+                                   const QString &buildDirectory, QString *error)
 {
     if (buildDirectory.isEmpty())
     {
@@ -141,12 +149,20 @@ QList<QStringList> Build::commands(Platform platform, Type type, const QString &
         return {};
     }
 
-    if (platform == Platform::Pc)
+    QString toolchain;
+    switch (target)
     {
+    case BuildTarget::Pc:
         return pipeline(buildDirectory, type, {});
+    case BuildTarget::WindowsFromHost:
+        toolchain = mingwToolchainFile(projectDirectory, error);
+        break;
+    case BuildTarget::Cg50:
+        toolchain = fxsdkToolchainFile(error);
+        break;
+    default:
+        toolchain = consoleToolchainFile(platformOf(target), error);
     }
-
-    const QString toolchain = platform == Platform::Cg50 ? fxsdkToolchainFile(error) : consoleToolchainFile(platform, error);
     if (toolchain.isEmpty())
     {
         return {};
