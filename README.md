@@ -32,7 +32,7 @@ cmake --build build
   cg50/icon-uns.png  cg50/icon-sel.png
   ```
 
-  `.vscode/` is the engine repository's configuration retargeted at the game. The art in `assets/`, `sce_sys/`, `switch/`, `3ds/` and `cg50/` is flat white placeholder to replace.
+  `.vscode/` is the engine repository's configuration retargeted at the game. It debugs with gdb on Linux and with Visual Studio's debugger on Windows, so F5 on Windows needs Visual Studio's C++ tools and a `cmake` on the `PATH`, not the w64devkit the tool can download; a `build/` the tool configured with w64devkit has to be deleted before VS Code builds into it. The art in `assets/`, `sce_sys/`, `switch/`, `3ds/` and `cg50/` is flat white placeholder to replace.
 - **An open project** is a sidebar of pages: **General** for the game's identity, **Display**, **Icons**, **Engine**, and one page per platform with what only that platform declares. The build controls stay at the bottom whichever page is shown, and **Projects** above the sidebar goes back to the home screen.
 - **Open Project** and **Save** read and write `project.fried`, keeping any keys the tool does not know about. The window title is marked while the form holds unsaved edits. **Close Project** (Ctrl+W) goes back to the home screen. Anything that would discard unsaved edits offers to save them first.
 - **Build** (Ctrl+B) runs the whole pipeline for the selected target in a window that streams the output, colours it by message type, reports when it is done and offers to open the build folder:
