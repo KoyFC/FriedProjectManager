@@ -1,5 +1,6 @@
 #include "build.h"
 
+#include "emscripten_sdk.h"
 #include "windows_toolchain.h"
 
 #include <QDir>
@@ -79,6 +80,18 @@ namespace
         }
 
         return file;
+    }
+
+    QString emscriptenToolchainFile(QString *error)
+    {
+        const QString sdk = EmscriptenSdk::directory();
+        if (sdk.isEmpty())
+        {
+            *error = QStringLiteral("There is no Emscripten SDK, so there is nothing to build for the web with.");
+            return {};
+        }
+
+        return EmscriptenSdk::toolchainFile(sdk);
     }
 
     // A game holds the engine as its engine/ submodule, while the engine's own
@@ -168,6 +181,11 @@ namespace
 #endif
 }
 
+bool Build::needsEmscriptenDownload(BuildTarget target)
+{
+    return target == BuildTarget::Web && EmscriptenSdk::directory().isEmpty();
+}
+
 bool Build::needsCompilerDownload(BuildTarget target)
 {
 #ifdef Q_OS_WIN
@@ -250,6 +268,9 @@ QList<QStringList> Build::commands(BuildTarget target, Type type, bool logToFile
         break;
     case BuildTarget::Cg50:
         toolchain = fxsdkToolchainFile(error);
+        break;
+    case BuildTarget::Web:
+        toolchain = emscriptenToolchainFile(error);
         break;
     default:
         toolchain = consoleToolchainFile(platformOf(target), error);

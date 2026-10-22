@@ -1,5 +1,6 @@
 #include "storage.h"
 
+#include "emscripten_sdk.h"
 #include "windows_toolchain.h"
 
 #include <QDir>
@@ -76,6 +77,14 @@ QList<StorageItem> Storage::items()
         found << StorageItem{QFileInfo(w64devkit).fileName(), s_pc, w64devkit, StorageItem::Origin::ProjectManager,
                              WindowsToolchain::w64devkitInstalled()};
     }
+
+    const QString emsdk = EmscriptenSdk::managedDirectory();
+    if (QFileInfo::exists(emsdk))
+    {
+        found << StorageItem{QFileInfo(emsdk).fileName(), QStringLiteral("Web"), emsdk,
+                             StorageItem::Origin::ProjectManager, QFileInfo::exists(EmscriptenSdk::toolchainFile(emsdk))};
+    }
+    appendSdk(found, QStringLiteral("Emscripten SDK"), QStringLiteral("Web"), qEnvironmentVariable("EMSDK"));
 
     appendSdk(found, QStringLiteral("VitaSDK"), QStringLiteral("PlayStation Vita"), qEnvironmentVariable("VITASDK"));
     appendSdk(found, QStringLiteral("devkitPro"), QStringLiteral("Nintendo Switch and Nintendo 3DS"),

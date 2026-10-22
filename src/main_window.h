@@ -65,6 +65,7 @@ private:
     bool confirmGitNotice();
     void buildProject();
     bool downloadCompiler();
+    bool downloadEmscripten();
     void showStorage();
     void chooseIcon();
     void showIcons();

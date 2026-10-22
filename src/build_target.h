@@ -6,7 +6,8 @@
 #include <QString>
 
 // What the build bar compiles for. Windows from another system is a target of
-// its own, while the game it produces is still the PC platform.
+// its own, while the game it produces is still the PC platform. So is the
+// web, which the project's pages also treat as the PC.
 enum class BuildTarget
 {
     Pc,
@@ -14,16 +15,18 @@ enum class BuildTarget
     Vita,
     Switch,
     Nintendo3ds,
-    Cg50
+    Cg50,
+    Web
 };
 
 inline QList<BuildTarget> buildTargets()
 {
 #ifdef Q_OS_WIN
-    return {BuildTarget::Pc, BuildTarget::Vita, BuildTarget::Switch, BuildTarget::Nintendo3ds, BuildTarget::Cg50};
+    return {BuildTarget::Pc, BuildTarget::Vita, BuildTarget::Switch, BuildTarget::Nintendo3ds, BuildTarget::Cg50,
+            BuildTarget::Web};
 #else
     return {BuildTarget::Pc,          BuildTarget::WindowsFromHost, BuildTarget::Vita, BuildTarget::Switch,
-            BuildTarget::Nintendo3ds, BuildTarget::Cg50};
+            BuildTarget::Nintendo3ds, BuildTarget::Cg50,          BuildTarget::Web};
 #endif
 }
 
@@ -46,10 +49,18 @@ inline Platform platformOf(BuildTarget target)
 
 inline QString buildTargetKey(BuildTarget target)
 {
+    if (target == BuildTarget::Web)
+    {
+        return QStringLiteral("web");
+    }
     return target == BuildTarget::WindowsFromHost ? QStringLiteral("windows") : platformKey(platformOf(target));
 }
 
 inline QString buildTargetName(BuildTarget target)
 {
+    if (target == BuildTarget::Web)
+    {
+        return QStringLiteral("Web");
+    }
     return target == BuildTarget::WindowsFromHost ? QStringLiteral("Windows") : platformName(platformOf(target));
 }

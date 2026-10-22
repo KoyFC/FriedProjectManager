@@ -26,6 +26,8 @@ public:
 
     // On Windows without Visual Studio, until the tool has downloaded a compiler of its own.
     static bool needsCompilerDownload(BuildTarget target);
+    // The web build, with no Emscripten SDK anywhere the tool looks.
+    static bool needsEmscriptenDownload(BuildTarget target);
     static QProcessEnvironment environment(BuildTarget target);
 
     // Empty when the platform cannot be built on this machine, with the reason in error.

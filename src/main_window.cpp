@@ -4,6 +4,7 @@
 #include "build_bar.h"
 #include "command_dialog.h"
 #include "display_editor.h"
+#include "emscripten_sdk.h"
 #include "storage_dialog.h"
 #include "engine_version.h"
 #include "engine_version_dialog.h"
@@ -936,6 +937,11 @@ void MainWindow::buildProject()
         return;
     }
 
+    if (Build::needsEmscriptenDownload(target) && !downloadEmscripten())
+    {
+        return;
+    }
+
     QString error;
     const QList<QStringList> commands =
         Build::commands(target, type, m_buildBar->logToFile(), m_project.directory(), m_buildBar->directory(), &error);
@@ -1022,6 +1028,38 @@ bool MainWindow::downloadCompiler()
         if (download.succeeded())
         {
             QMessageBox::warning(this, QStringLiteral("C++ Compiler"), error);
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool MainWindow::downloadEmscripten()
+{
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, QStringLiteral("Emscripten SDK"),
+        QStringLiteral("Building for the web needs the Emscripten SDK, which is not installed.\n\n"
+                       "The Project Manager can download it, which needs git and Python and takes a few hundred MB, "
+                       "into %1 and build with it from then on. Download it now?")
+            .arg(QDir::toNativeSeparators(EmscriptenSdk::managedDirectory())));
+    if (answer != QMessageBox::Yes)
+    {
+        return false;
+    }
+
+    CommandDialog download(this, QStringLiteral("Download the Emscripten SDK"), m_project.directory(),
+                           EmscriptenSdk::beginInstall());
+    download.setActivity(QStringLiteral("Downloading"));
+    download.exec();
+
+    QString error;
+    if (!EmscriptenSdk::finishInstall(download.succeeded(), &error))
+    {
+        // A download that failed already said why in its own window.
+        if (download.succeeded())
+        {
+            QMessageBox::warning(this, QStringLiteral("Emscripten SDK"), error);
         }
         return false;
     }
