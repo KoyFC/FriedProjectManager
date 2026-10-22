@@ -4,7 +4,7 @@ import fried.Window;
 import fried.graphics.Color;
 import fried.graphics.Texture;
 import fried.input.GamepadButton;
-import fried.input.Input;
+import fried.input.InputAction;
 import fried.input.Key;
 import fried.io.Assets;
 import fried.scene.GameObject;
@@ -34,8 +34,12 @@ class Main {
 		square.transform.setScale(SQUARE_SIZE / squareTexture.width);
 		square.addComponent(new Sprite(squareTexture));
 
+		var quit = new InputAction("Quit", Button);
+		quit.addKey(Key.Escape).addGamepadButton(GamepadButton.Start);
+		quit.enable();
+
 		Application.run(function() {
-			if (Input.isKeyDown(Key.Escape) || Input.isGamepadButtonDown(GamepadButton.Start)) {
+			if (quit.isDown) {
 				Application.quit();
 			}
 
