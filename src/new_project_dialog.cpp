@@ -1,5 +1,6 @@
 #include "new_project_dialog.h"
 
+#include "last_location.h"
 #include "project.h"
 
 #include <QDialogButtonBox>
@@ -89,6 +90,7 @@ void NewProjectDialog::chooseLocation()
         return;
     }
 
+    LastLocation::rememberParentOf(LastLocation::Kind::Projects, location);
     m_location->setText(location);
 }
 

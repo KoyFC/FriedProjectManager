@@ -13,6 +13,7 @@
 #include "icon_dialog.h"
 #include "image_conversion.h"
 #include "image_file_editor.h"
+#include "last_location.h"
 #include "live_area.h"
 #include "live_area_template_editor.h"
 #include "new_project_dialog.h"
@@ -732,7 +733,7 @@ void MainWindow::newProject()
         return;
     }
 
-    NewProjectDialog dialog(this, nearbyLocation());
+    NewProjectDialog dialog(this, LastLocation::of(LastLocation::Kind::Projects, nearbyLocation()));
     if (dialog.exec() != QDialog::Accepted)
     {
         return;
@@ -760,11 +761,14 @@ void MainWindow::newProject()
 
 void MainWindow::chooseProject()
 {
-    const QString directory = QFileDialog::getExistingDirectory(this, QStringLiteral("Open Project"), nearbyLocation());
+    const QString directory = QFileDialog::getExistingDirectory(this, QStringLiteral("Open Project"),
+                                                                    LastLocation::of(LastLocation::Kind::Projects, nearbyLocation()));
     if (directory.isEmpty())
     {
         return;
     }
+
+    LastLocation::rememberParentOf(LastLocation::Kind::Projects, directory);
 
     openProject(directory);
 }

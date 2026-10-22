@@ -2,6 +2,7 @@
 
 #include "icon.h"
 #include "image_conversion.h"
+#include "last_location.h"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -160,12 +161,14 @@ QWidget *IconDialog::buildPanel(Platform platform)
 void IconDialog::chooseFor(Platform platform)
 {
     const QString chosen =
-        QFileDialog::getOpenFileName(this, QStringLiteral("Choose an icon image"), m_directory,
+        QFileDialog::getOpenFileName(this, QStringLiteral("Choose an icon image"), LastLocation::of(LastLocation::Kind::Images, m_directory),
                                      QStringLiteral("Images (%1)").arg(ImageConversion::readablePatterns().join(QChar(' '))));
     if (chosen.isEmpty())
     {
         return;
     }
+
+    LastLocation::rememberFolderOf(LastLocation::Kind::Images, chosen);
 
     QString error;
     const QImage source = ImageConversion::read(chosen, &error);

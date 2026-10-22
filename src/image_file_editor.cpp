@@ -1,6 +1,7 @@
 #include "image_file_editor.h"
 
 #include "help_label.h"
+#include "last_location.h"
 
 #include <QDir>
 #include <QFileDialog>
@@ -117,12 +118,14 @@ void ImageFileEditor::pendingWritten()
 void ImageFileEditor::choose()
 {
     const QString chosen = QFileDialog::getOpenFileName(
-        this, QStringLiteral("Choose an image"), m_directory,
+        this, QStringLiteral("Choose an image"), LastLocation::of(LastLocation::Kind::Images, m_directory),
         QStringLiteral("Images (%1)").arg(ImageConversion::readablePatterns().join(QChar(' '))));
     if (chosen.isEmpty())
     {
         return;
     }
+
+    LastLocation::rememberFolderOf(LastLocation::Kind::Images, chosen);
 
     QString error;
     const QImage source = ImageConversion::read(chosen, &error);

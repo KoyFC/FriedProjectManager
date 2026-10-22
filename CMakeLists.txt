@@ -56,6 +56,8 @@ qt_add_executable(fried_project_manager
     src/project.cpp
     src/project_template.h
     src/project_template.cpp
+    src/last_location.h
+    src/last_location.cpp
     src/recent_projects.h
     src/recent_projects.cpp
     src/storage.h
