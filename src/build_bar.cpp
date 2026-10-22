@@ -1,6 +1,7 @@
 #include "build_bar.h"
 
 #include <QAction>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -41,6 +42,11 @@ namespace
     {
         return rememberedKey(QStringLiteral("buildTypes"), project, target);
     }
+
+    QString logToFileKey(const QString &project, BuildTarget target)
+    {
+        return rememberedKey(QStringLiteral("buildLogToFile"), project, target);
+    }
 }
 
 BuildBar::BuildBar(QWidget *parent, QAction *build)
@@ -57,6 +63,10 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     m_type->insertItem(comboIndexOf(Build::Type::Release), Build::name(Build::Type::Release));
     m_type->setToolTip(QStringLiteral("Debug keeps the symbols a debugger needs. Release optimises, which is "
                                       "what a build for players wants."));
+
+    m_logToFile = new QCheckBox(QStringLiteral("Log to file"), this);
+    m_logToFile->setToolTip(QStringLiteral("The build writes its log to Player.log in the game's user data folder, "
+                                           "as well as to the console."));
 
     m_directory = new QLineEdit(this);
     m_directory->setPlaceholderText(QStringLiteral("Build directory"));
@@ -77,6 +87,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     QHBoxLayout *controls = new QHBoxLayout;
     controls->addWidget(m_target);
     controls->addWidget(m_type);
+    controls->addWidget(m_logToFile);
     controls->addWidget(m_directory, 1);
     controls->addWidget(browse);
     controls->addWidget(m_reset);
@@ -88,6 +99,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
 
     connect(m_target, &QComboBox::currentIndexChanged, this, &BuildBar::showRemembered);
     connect(m_type, &QComboBox::currentIndexChanged, this, &BuildBar::rememberType);
+    connect(m_logToFile, &QCheckBox::toggled, this, &BuildBar::rememberLogToFile);
     connect(browse, &QPushButton::clicked, this, &BuildBar::chooseDirectory);
     connect(m_reset, &QPushButton::clicked, this, &BuildBar::resetDirectory);
     connect(m_directory, &QLineEdit::editingFinished, this, &BuildBar::rememberDirectory);
@@ -108,6 +120,11 @@ BuildTarget BuildBar::target() const
 Build::Type BuildBar::type() const
 {
     return static_cast<Build::Type>(m_type->currentIndex());
+}
+
+bool BuildBar::logToFile() const
+{
+    return m_logToFile->isChecked();
 }
 
 // Whatever follows the token is relative to the project; anything else stands on its own.
@@ -131,6 +148,7 @@ void BuildBar::remember()
 {
     rememberDirectory();
     rememberType();
+    rememberLogToFile();
 }
 
 void BuildBar::showRemembered()
@@ -143,7 +161,9 @@ void BuildBar::showRemembered()
 
     // Showing what was remembered is not a choice, so it stores nothing.
     const QSignalBlocker blocker(m_type);
+    const QSignalBlocker logBlocker(m_logToFile);
     m_type->setCurrentIndex(comboIndexOf(Build::typeNamed(type)));
+    m_logToFile->setChecked(settings.value(logToFileKey(m_projectDirectory, target()), false).toBool());
     showDirectory(directory);
 
     // The text may not have changed, but the target it is checked against has.
@@ -198,6 +218,17 @@ void BuildBar::rememberType()
 
     QSettings settings;
     settings.setValue(typeKey(m_projectDirectory, target()), Build::name(type()));
+}
+
+void BuildBar::rememberLogToFile()
+{
+    if (m_projectDirectory.isEmpty())
+    {
+        return;
+    }
+
+    QSettings settings;
+    settings.setValue(logToFileKey(m_projectDirectory, target()), logToFile());
 }
 
 void BuildBar::rememberDirectory()

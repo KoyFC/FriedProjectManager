@@ -5,6 +5,7 @@
 #include <QWidget>
 
 class QAction;
+class QCheckBox;
 class QComboBox;
 class QLabel;
 class QLineEdit;
@@ -23,6 +24,7 @@ public:
 
     BuildTarget target() const;
     Build::Type type() const;
+    bool logToFile() const;
 
     // Relative to the project, unless it was given as an absolute path.
     QString directory() const;
@@ -36,6 +38,7 @@ private:
     void chooseDirectory();
     void resetDirectory();
     void rememberType();
+    void rememberLogToFile();
     void rememberDirectory();
     QString vitaSpaceProblem() const;
 
@@ -43,6 +46,7 @@ private:
 
     QComboBox *m_target = nullptr;
     QComboBox *m_type = nullptr;
+    QCheckBox *m_logToFile = nullptr;
     QLineEdit *m_directory = nullptr;
     QPushButton *m_reset = nullptr;
     QLabel *m_warning = nullptr;

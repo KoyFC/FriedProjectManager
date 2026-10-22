@@ -934,7 +934,7 @@ void MainWindow::buildProject()
 
     QString error;
     const QList<QStringList> commands =
-        Build::commands(target, type, m_project.directory(), m_buildBar->directory(), &error);
+        Build::commands(target, type, m_buildBar->logToFile(), m_project.directory(), m_buildBar->directory(), &error);
     if (commands.isEmpty())
     {
         QMessageBox::warning(this, QStringLiteral("Build"), error);

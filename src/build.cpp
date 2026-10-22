@@ -127,7 +127,8 @@ namespace
         return file;
     }
 
-    QList<QStringList> pipeline(const QString &buildTree, Build::Type type, const QStringList &configureExtras,
+    QList<QStringList> pipeline(const QString &buildTree, Build::Type type, bool logToFile,
+                                const QStringList &configureExtras,
                                 const QString &cmake = QStringLiteral("cmake"))
     {
         const QString typeName = Build::name(type);
@@ -138,7 +139,7 @@ namespace
         configure += configureExtras;
 
         return {
-            {QStringLiteral("haxe"), QStringLiteral("build.hxml")},
+            Build::haxeCommand(type, logToFile),
             configure,
             // A generator that holds every configuration at once ignores the variable and reads --config
             {cmake, QStringLiteral("--build"), buildTree, QStringLiteral("--config"), typeName,
@@ -147,17 +148,17 @@ namespace
     }
 
 #ifdef Q_OS_WIN
-    QList<QStringList> windowsPipeline(const QString &buildTree, Build::Type type, QString *error)
+    QList<QStringList> windowsPipeline(const QString &buildTree, Build::Type type, bool logToFile, QString *error)
     {
         const QString visualStudioCmake = WindowsToolchain::visualStudioCmake();
         if (!visualStudioCmake.isEmpty())
         {
-            return pipeline(buildTree, type, {}, visualStudioCmake);
+            return pipeline(buildTree, type, logToFile, {}, visualStudioCmake);
         }
 
         if (WindowsToolchain::w64devkitInstalled())
         {
-            return WindowsToolchain::w64devkitPipeline(buildTree, Build::name(type));
+            return WindowsToolchain::w64devkitPipeline(Build::haxeCommand(type, logToFile), buildTree, Build::name(type));
         }
 
         *error = QStringLiteral("There is no C++ compiler to build with: Visual Studio's C++ tools are not "
@@ -211,8 +212,23 @@ Build::Type Build::typeNamed(const QString &name)
     return name == Build::name(Type::Release) ? Type::Release : Type::Debug;
 }
 
-QList<QStringList> Build::commands(BuildTarget target, Type type, const QString &projectDirectory,
-                                   const QString &buildDirectory, QString *error)
+QStringList Build::haxeCommand(Type type, bool logToFile)
+{
+    QStringList command = {QStringLiteral("haxe"), QStringLiteral("build.hxml")};
+    if (type == Type::Debug)
+    {
+        command << QStringLiteral("-debug");
+    }
+    if (logToFile)
+    {
+        command << QStringLiteral("-D") << QStringLiteral("fried_log_file");
+    }
+    return command;
+}
+
+QList<QStringList> Build::commands(BuildTarget target, Type type, bool logToFile,
+                                   const QString &projectDirectory, const QString &buildDirectory,
+                                   QString *error)
 {
     if (buildDirectory.isEmpty())
     {
@@ -225,9 +241,9 @@ QList<QStringList> Build::commands(BuildTarget target, Type type, const QString 
     {
     case BuildTarget::Pc:
 #ifdef Q_OS_WIN
-        return windowsPipeline(buildDirectory, type, error);
+        return windowsPipeline(buildDirectory, type, logToFile, error);
 #else
-        return pipeline(buildDirectory, type, {});
+        return pipeline(buildDirectory, type, logToFile, {});
 #endif
     case BuildTarget::WindowsFromHost:
         toolchain = mingwToolchainFile(projectDirectory, error);
@@ -243,5 +259,6 @@ QList<QStringList> Build::commands(BuildTarget target, Type type, const QString 
         return {};
     }
 
-    return pipeline(buildDirectory, type, {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
+    return pipeline(buildDirectory, type, logToFile,
+                    {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
 }
