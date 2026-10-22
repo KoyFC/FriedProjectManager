@@ -10,6 +10,8 @@
 namespace
 {
     const QString s_unpackedMarker = QStringLiteral(".fried-unpacked");
+    const QString s_installedMarker = QStringLiteral(".fried-installed");
+    const QString s_installedDirectory = QStringLiteral("installed");
     const QString s_pc = QStringLiteral("PC");
 
     void appendSdk(QList<StorageItem> &items, const QString &name, const QString &platform, const QString &path)
@@ -51,8 +53,21 @@ QList<StorageItem> Storage::items()
     const QDir sources(dependencySourcesDirectory());
     for (const QFileInfo &release : sources.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
     {
+        if (release.fileName() == s_installedDirectory)
+        {
+            continue;
+        }
+
         found << StorageItem{release.fileName(), s_pc, release.absoluteFilePath(), StorageItem::Origin::EngineBuilds,
                              QFileInfo::exists(QDir(release.absoluteFilePath()).filePath(s_unpackedMarker))};
+    }
+
+    // The libraries the engine compiled from those sources, one folder per compiler and configuration.
+    const QDir installed(sources.filePath(s_installedDirectory));
+    for (const QFileInfo &build : installed.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+    {
+        found << StorageItem{build.fileName(), s_pc, build.absoluteFilePath(), StorageItem::Origin::EngineBuilds,
+                             QFileInfo::exists(QDir(build.absoluteFilePath()).filePath(s_installedMarker))};
     }
 
     const QString w64devkit = WindowsToolchain::w64devkitDirectory();
