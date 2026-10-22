@@ -4,6 +4,7 @@
 #include "project.h"
 #include "recent_projects.h"
 
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -21,6 +22,7 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QSize>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace
@@ -94,10 +96,9 @@ HomePage::HomePage(QWidget *parent)
     m_open->setEnabled(false);
     connect(m_open, &QPushButton::clicked, this, &HomePage::openSelected);
 
-    m_locate = new QPushButton(QStringLiteral("Locate..."), this);
-    m_locate->setEnabled(false);
-    m_locate->setToolTip(QStringLiteral("Point this entry at the project's new place."));
-    connect(m_locate, &QPushButton::clicked, this, &HomePage::locateSelected);
+    m_folder = new QPushButton(this);
+    m_folder->setEnabled(false);
+    connect(m_folder, &QPushButton::clicked, this, &HomePage::folderOfSelected);
 
     m_remove = new QPushButton(QStringLiteral("Remove"), this);
     m_remove->setEnabled(false);
@@ -112,7 +113,7 @@ HomePage::HomePage(QWidget *parent)
 
     QHBoxLayout *buttons = new QHBoxLayout;
     buttons->addWidget(m_open);
-    buttons->addWidget(m_locate);
+    buttons->addWidget(m_folder);
     buttons->addWidget(m_remove);
     buttons->addStretch();
     buttons->addWidget(create);
@@ -175,6 +176,20 @@ void HomePage::openSelected()
     }
 
     emit projectChosen(selectedPath());
+}
+
+void HomePage::folderOfSelected()
+{
+    if (selectionIsMissing())
+    {
+        locateSelected();
+        return;
+    }
+
+    if (!selectedPath().isEmpty())
+    {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(selectedPath()));
+    }
 }
 
 void HomePage::locateSelected()
@@ -256,6 +271,9 @@ void HomePage::selectionChanged()
     const bool missing = selectionIsMissing();
 
     m_open->setEnabled(selected && !missing);
-    m_locate->setEnabled(missing);
+    m_folder->setEnabled(selected);
+    m_folder->setText(missing ? QStringLiteral("Locate...") : QStringLiteral("Open Folder"));
+    m_folder->setToolTip(missing ? QStringLiteral("Point this entry at the project's new place.")
+                                 : QStringLiteral("Show the project's folder in the file manager."));
     m_remove->setEnabled(selected);
 }

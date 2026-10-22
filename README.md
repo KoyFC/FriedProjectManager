@@ -22,7 +22,7 @@ cmake --build build
 
 ## What it does
 
-- **Home screen** with the last 20 projects opened, most recent first, each with its icon, name and directory. One whose `project.fried` is gone is listed as **(not found)**, and **Locate...** points it at where it moved to. **Remove** takes an entry off the list without deleting anything.
+- **Home screen** with the last 20 projects opened, most recent first, each with its icon, name and directory. One whose `project.fried` is gone is listed as **(not found)**, and **Locate...** points it at where it moved to. For one that is found, the same button reads **Open Folder** and shows its folder in the file manager. **Remove** takes an entry off the list without deleting anything.
 - **New Project** writes a whole project directory, makes it a Git repository with the engine as a submodule, and opens it. Everything is left staged, so the first commit is yours:
 
   ```

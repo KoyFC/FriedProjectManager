@@ -26,6 +26,7 @@ signals:
 private:
     void openSelected();
     void locateSelected();
+    void folderOfSelected();
     void removeSelected();
     void selectionChanged();
 
@@ -37,6 +38,6 @@ private:
     QListWidget *m_list = nullptr;
     QLabel *m_empty = nullptr;
     QPushButton *m_open = nullptr;
-    QPushButton *m_locate = nullptr;
+    QPushButton *m_folder = nullptr;
     QPushButton *m_remove = nullptr;
 };
