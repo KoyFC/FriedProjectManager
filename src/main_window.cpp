@@ -67,7 +67,8 @@ namespace
     const QSize s_bootScreenSize(960, 544);
 
     // Every platform in the order the sidebar and the icons page list them.
-    const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds, Platform::Cg50};
+    const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds,
+                                      Platform::NintendoDs, Platform::Cg50};
 
     int indexOf(Platform platform)
     {
@@ -326,7 +327,7 @@ QWidget *MainWindow::buildGeneralPage()
 
     m_name = addField(form, parent, QStringLiteral("Name"));
     m_organization = addField(form, parent, QStringLiteral("Organization"),
-                              QStringLiteral("Shown as the author on the Switch and the 3DS."));
+                              QStringLiteral("Shown as the author on the Switch, the 3DS and the DS."));
     m_version = addField(form, parent, QStringLiteral("Version"),
                          QStringLiteral("Two digits, a dot and two digits (01.00), which is what the Vita requires."));
     m_windowTitle = addField(form, parent, QStringLiteral("Window title"),
@@ -434,6 +435,10 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     case Platform::Nintendo3ds:
         description = QStringLiteral("A 3DS .3dsx is labelled with the name, organization and version on the "
                                      "General page.");
+        break;
+    case Platform::NintendoDs:
+        description = QStringLiteral("A DS .nds is labelled with the name, organization and version on the General "
+                                     "page.");
         break;
     case Platform::Cg50:
         description = QStringLiteral("An fx-CG50 .g3a is labelled with the name on the General page. Its assets go "

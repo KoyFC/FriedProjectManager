@@ -87,7 +87,7 @@ QList<StorageItem> Storage::items()
     appendSdk(found, QStringLiteral("Emscripten SDK"), QStringLiteral("Web"), qEnvironmentVariable("EMSDK"));
 
     appendSdk(found, QStringLiteral("VitaSDK"), QStringLiteral("PlayStation Vita"), qEnvironmentVariable("VITASDK"));
-    appendSdk(found, QStringLiteral("devkitPro"), QStringLiteral("Nintendo Switch and Nintendo 3DS"),
+    appendSdk(found, QStringLiteral("devkitPro"), QStringLiteral("Nintendo Switch, Nintendo 3DS and Nintendo DS"),
               qEnvironmentVariable("DEVKITPRO"));
     appendSdk(found, QStringLiteral("fxSDK"), QStringLiteral("Casio fx-CG50"), fxsdkDirectory());
 

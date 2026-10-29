@@ -5,18 +5,26 @@
 #include <QColor>
 #include <QPainter>
 
+#include <algorithm>
+#include <climits>
+#include <vector>
+
 namespace
 {
     const QString s_pcPath = QStringLiteral("assets/icon.png");
     const QString s_vitaPath = QStringLiteral("sce_sys/icon0.png");
     const QString s_switchPath = QStringLiteral("switch/icon.jpg");
     const QString s_nintendo3dsPath = QStringLiteral("3ds/icon.png");
+    const QString s_nintendoDsPath = QStringLiteral("nds/icon.bmp");
     const QString s_cg50Path = QStringLiteral("cg50/icon-uns.png");
     const QString s_cg50SelectedPath = QStringLiteral("cg50/icon-sel.png");
 
     constexpr int s_vitaIconSize = 128;
     constexpr int s_switchIconSize = 256;
     constexpr int s_nintendo3dsIconSize = 48;
+    constexpr int s_nintendoDsIconSize = 32;
+    // The DS menu's icon has sixteen colours, the first of them transparent.
+    constexpr int s_nintendoDsOpaqueColours = 15;
     constexpr int s_largestWindowIcon = 512;
 
     // A .g3a's menu icon, drawn inside a frame of the calculator's own: white
@@ -29,6 +37,10 @@ namespace
 
     const char *formatOf(Platform platform)
     {
+        if (platform == Platform::NintendoDs)
+        {
+            return "bmp";
+        }
         return platform == Platform::Switch ? "jpg" : "png";
     }
 
@@ -86,6 +98,161 @@ namespace
     {
         const QImage resized = resizedTo(squared(source, notes), s_nintendo3dsIconSize, notes);
         return flattenedOntoBlack(resized, QStringLiteral("the 3DS stores its icon without transparency"), notes);
+    }
+
+    // Median cut: the box of colours spread widest along one channel is split at
+    // its median until there are enough boxes, and each box becomes its average.
+    QList<QRgb> fewColours(std::vector<QRgb> colours, int count)
+    {
+        struct Box
+        {
+            size_t begin;
+            size_t end;
+        };
+
+        const auto channel = [](QRgb colour, int index)
+        { return index == 0 ? qRed(colour) : index == 1 ? qGreen(colour) : qBlue(colour); };
+        const auto widest = [&](const Box &box, int *range)
+        {
+            int best = 0;
+            *range = -1;
+            for (int index = 0; index < 3; ++index)
+            {
+                int low = 255, high = 0;
+                for (size_t colour = box.begin; colour < box.end; ++colour)
+                {
+                    low = std::min(low, channel(colours[colour], index));
+                    high = std::max(high, channel(colours[colour], index));
+                }
+                if (high - low > *range)
+                {
+                    *range = high - low;
+                    best = index;
+                }
+            }
+            return best;
+        };
+
+        QList<Box> boxes = {{0, colours.size()}};
+        while (boxes.size() < count)
+        {
+            int chosen = -1, chosenRange = 0, chosenChannel = 0;
+            for (int index = 0; index < boxes.size(); ++index)
+            {
+                int range = 0;
+                const int along = widest(boxes[index], &range);
+                if (range > chosenRange)
+                {
+                    chosen = index;
+                    chosenRange = range;
+                    chosenChannel = along;
+                }
+            }
+            if (chosen < 0)
+            {
+                break;
+            }
+
+            const Box box = boxes[chosen];
+            const size_t middle = box.begin + (box.end - box.begin) / 2;
+            std::nth_element(colours.begin() + box.begin, colours.begin() + middle, colours.begin() + box.end,
+                             [&](QRgb a, QRgb b) { return channel(a, chosenChannel) < channel(b, chosenChannel); });
+            boxes[chosen] = {box.begin, middle};
+            boxes.append({middle, box.end});
+        }
+
+        QList<QRgb> palette;
+        for (const Box &box : boxes)
+        {
+            int red = 0, green = 0, blue = 0;
+            for (size_t colour = box.begin; colour < box.end; ++colour)
+            {
+                red += qRed(colours[colour]);
+                green += qGreen(colours[colour]);
+                blue += qBlue(colours[colour]);
+            }
+            const int size = (int)(box.end - box.begin);
+            palette << qRgb(red / size, green / size, blue / size);
+        }
+        return palette;
+    }
+
+    int nearestOf(const QList<QRgb> &palette, QRgb colour)
+    {
+        int nearest = 1, nearestDistance = INT_MAX;
+        for (int index = 1; index < palette.size(); ++index)
+        {
+            const int red = qRed(palette[index]) - qRed(colour);
+            const int green = qGreen(palette[index]) - qGreen(colour);
+            const int blue = qBlue(palette[index]) - qBlue(colour);
+            const int distance = red * red + green * green + blue * blue;
+            if (distance < nearestDistance)
+            {
+                nearest = index;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    // A 16-colour palette whose first entry is transparent, which is how the DS
+    // menu reads an icon. ndstool takes a BMP of more colours without a warning
+    // and garbles it, so the colours are cut here.
+    QImage forNintendoDs(const QImage &source, QStringList *notes)
+    {
+        const QImage resized = resizedTo(squared(source, notes), s_nintendoDsIconSize, notes)
+                                   .convertToFormat(QImage::Format_ARGB32);
+
+        std::vector<QRgb> opaque;
+        bool partlyTransparent = false;
+        for (int y = 0; y < resized.height(); ++y)
+        {
+            for (int x = 0; x < resized.width(); ++x)
+            {
+                const QRgb pixel = resized.pixel(x, y);
+                partlyTransparent = partlyTransparent || (qAlpha(pixel) > 0 && qAlpha(pixel) < 255);
+                if (qAlpha(pixel) >= 128)
+                {
+                    opaque.push_back(pixel | 0xff000000u);
+                }
+            }
+        }
+        if (partlyTransparent)
+        {
+            *notes << QStringLiteral("Made transparent where less than half opaque and opaque elsewhere, since the "
+                                     "DS icon has no partial transparency.");
+        }
+
+        QList<QRgb> palette = {qRgba(0, 0, 0, 0)};
+        if (!opaque.empty())
+        {
+            std::vector<QRgb> distinct = opaque;
+            std::sort(distinct.begin(), distinct.end());
+            distinct.erase(std::unique(distinct.begin(), distinct.end()), distinct.end());
+            if ((int)distinct.size() > s_nintendoDsOpaqueColours)
+            {
+                *notes << QStringLiteral("Approximated to %1 colours, which is all the DS icon holds besides "
+                                         "transparency.")
+                              .arg(s_nintendoDsOpaqueColours);
+                palette += fewColours(opaque, s_nintendoDsOpaqueColours);
+            }
+            else
+            {
+                palette += QList<QRgb>(distinct.begin(), distinct.end());
+            }
+        }
+
+        QImage indexed(resized.size(), QImage::Format_Indexed8);
+        indexed.setColorTable(palette);
+        for (int y = 0; y < resized.height(); ++y)
+        {
+            for (int x = 0; x < resized.width(); ++x)
+            {
+                const QRgb pixel = resized.pixel(x, y);
+                indexed.setPixel(x, y, qAlpha(pixel) >= 128 ? nearestOf(palette, pixel) : 0);
+            }
+        }
+        return indexed;
     }
 
     QImage cg50Framed(const QImage &art, const QColor &frame)
@@ -150,6 +317,14 @@ namespace
             return QStringLiteral("%1 a %2x%2 PNG").arg(Icon::path(platform)).arg(image.width());
         }
 
+        if (platform == Platform::NintendoDs)
+        {
+            return QStringLiteral("%1 a %2x%2 BMP of %3 colours")
+                .arg(Icon::path(platform))
+                .arg(image.width())
+                .arg(image.colorCount());
+        }
+
         if (platform == Platform::Cg50)
         {
             return QStringLiteral("%1 a %2x%3 PNG, with %4 its selected twin")
@@ -180,6 +355,11 @@ QString Icon::path(Platform platform)
         return s_nintendo3dsPath;
     }
 
+    if (platform == Platform::NintendoDs)
+    {
+        return s_nintendoDsPath;
+    }
+
     if (platform == Platform::Cg50)
     {
         return s_cg50Path;
@@ -208,6 +388,11 @@ QImage Icon::render(Platform platform, const QImage &source, QStringList *notes)
     if (platform == Platform::Nintendo3ds)
     {
         return forNintendo3ds(source, notes);
+    }
+
+    if (platform == Platform::NintendoDs)
+    {
+        return forNintendoDs(source, notes);
     }
 
     if (platform == Platform::Cg50)

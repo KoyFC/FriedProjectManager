@@ -15,6 +15,7 @@ enum class BuildTarget
     Vita,
     Switch,
     Nintendo3ds,
+    NintendoDs,
     Cg50,
     Web
 };
@@ -22,11 +23,11 @@ enum class BuildTarget
 inline QList<BuildTarget> buildTargets()
 {
 #ifdef Q_OS_WIN
-    return {BuildTarget::Pc, BuildTarget::Vita, BuildTarget::Switch, BuildTarget::Nintendo3ds, BuildTarget::Cg50,
-            BuildTarget::Web};
+    return {BuildTarget::Pc,         BuildTarget::Vita, BuildTarget::Switch, BuildTarget::Nintendo3ds,
+            BuildTarget::NintendoDs, BuildTarget::Cg50, BuildTarget::Web};
 #else
     return {BuildTarget::Pc,          BuildTarget::WindowsFromHost, BuildTarget::Vita, BuildTarget::Switch,
-            BuildTarget::Nintendo3ds, BuildTarget::Cg50,          BuildTarget::Web};
+            BuildTarget::Nintendo3ds, BuildTarget::NintendoDs,      BuildTarget::Cg50, BuildTarget::Web};
 #endif
 }
 
@@ -40,6 +41,8 @@ inline Platform platformOf(BuildTarget target)
         return Platform::Switch;
     case BuildTarget::Nintendo3ds:
         return Platform::Nintendo3ds;
+    case BuildTarget::NintendoDs:
+        return Platform::NintendoDs;
     case BuildTarget::Cg50:
         return Platform::Cg50;
     default:

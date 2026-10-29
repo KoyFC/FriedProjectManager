@@ -28,6 +28,11 @@ namespace
             return {"DEVKITPRO", QStringLiteral("cmake/Switch.cmake"), QStringLiteral("Switch")};
         }
 
+        if (platform == Platform::NintendoDs)
+        {
+            return {"DEVKITPRO", QStringLiteral("cmake/NDS.cmake"), QStringLiteral("DS")};
+        }
+
         return {"DEVKITPRO", QStringLiteral("cmake/3DS.cmake"), QStringLiteral("3DS")};
     }
 
