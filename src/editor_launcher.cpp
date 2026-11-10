@@ -34,7 +34,7 @@ QString EditorLauncher::findExecutable()
     }
 
     // The repositories are siblings, as the engine's and this one's are.
-    const QDir beside(QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/../../FriedEditor/build/app")));
+    const QDir beside(QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/../../FriedEditor/build/app_imgui")));
     for (const QString &name : {QStringLiteral("fried_editor"), QStringLiteral("fried_editor.exe")})
     {
         if (isRunnable(beside.filePath(name)))
@@ -43,7 +43,7 @@ QString EditorLauncher::findExecutable()
         }
     }
 
-    const QDir home(QDir::homePath() + QStringLiteral("/Documentos/GitHub/FriedEditor/build/app"));
+    const QDir home(QDir::homePath() + QStringLiteral("/Documentos/GitHub/FriedEditor/build/app_imgui"));
     return isRunnable(home.filePath(QStringLiteral("fried_editor"))) ? home.filePath(QStringLiteral("fried_editor")) : QString();
 }
 
