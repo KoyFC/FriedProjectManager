@@ -192,8 +192,18 @@ QWidget *MainWindow::buildProjectView()
                          .arg(m_close->shortcut().toString(QKeySequence::NativeText)));
     connect(back, &QToolButton::clicked, this, &MainWindow::showHome);
 
+    QPushButton *openEditor = new QPushButton(QStringLiteral("Open in Editor"), view);
+    openEditor->setToolTip(QStringLiteral("Edit this project's scenes in the Fried Editor (%1).")
+                               .arg(m_editor->shortcut().toString(QKeySequence::NativeText)));
+    openEditor->setMinimumHeight(openEditor->sizeHint().height() + 12);
+    QFont bold = openEditor->font();
+    bold.setBold(true);
+    openEditor->setFont(bold);
+    connect(openEditor, &QPushButton::clicked, m_editor, &QAction::trigger);
+
     QVBoxLayout *sidebar = new QVBoxLayout;
     sidebar->addWidget(back, 0, Qt::AlignLeft);
+    sidebar->addWidget(openEditor);
     sidebar->addWidget(panel, 1);
     sidebar->addWidget(m_saveButton);
 
