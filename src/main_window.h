@@ -64,6 +64,7 @@ private:
     bool confirmLeavingProject();
     bool confirmGitNotice();
     void buildProject();
+    void openInEditor();
     bool downloadCompiler();
     bool downloadEmscripten();
     void showStorage();
@@ -100,6 +101,7 @@ private:
     QAction *m_save = nullptr;
     QAction *m_close = nullptr;
     QAction *m_icon = nullptr;
+    QAction *m_editor = nullptr;
 
     QLineEdit *m_name = nullptr;
     QLineEdit *m_organization = nullptr;

@@ -38,6 +38,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include "editor_launcher.h"
+
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPixmap>
@@ -100,6 +102,12 @@ MainWindow::MainWindow()
     m_icon->setEnabled(false);
     connect(m_icon, &QAction::triggered, this, &MainWindow::chooseIcon);
     fileMenu->addAction(m_icon);
+
+    m_editor = new QAction(QStringLiteral("Open in &Editor"), this);
+    m_editor->setShortcut(QKeySequence(QStringLiteral("Ctrl+E")));
+    m_editor->setEnabled(false);
+    connect(m_editor, &QAction::triggered, this, &MainWindow::openInEditor);
+    fileMenu->addAction(m_editor);
 
     m_build = new QAction(QStringLiteral("&Build"), this);
     m_build->setShortcut(QKeySequence(QStringLiteral("Ctrl+B")));
@@ -553,6 +561,7 @@ void MainWindow::showHome()
     m_build->setEnabled(false);
     m_save->setEnabled(false);
     m_icon->setEnabled(false);
+    m_editor->setEnabled(false);
     m_close->setEnabled(false);
 
     m_home->refresh();
@@ -582,6 +591,14 @@ bool MainWindow::confirmLeavingProject()
     }
 
     return ask.clickedButton() == discard;
+}
+
+void MainWindow::openInEditor()
+{
+    if (EditorLauncher::launch(m_project.directory(), this))
+    {
+        statusBar()->showMessage(QStringLiteral("Opened %1 in the editor").arg(m_project.name()), 4000);
+    }
 }
 
 void MainWindow::chooseIcon()
@@ -823,6 +840,7 @@ void MainWindow::showProject()
     m_build->setEnabled(true);
     m_save->setEnabled(true);
     m_icon->setEnabled(true);
+    m_editor->setEnabled(true);
     m_close->setEnabled(true);
     setWindowTitle(QStringLiteral("%1[*] - %2").arg(m_project.name(), s_applicationTitle));
     showUnsavedState();
