@@ -364,7 +364,7 @@ QWidget *MainWindow::buildGeneralPage()
     m_version = addField(form, parent, QStringLiteral("Version"),
                          QStringLiteral("Two digits, a dot and two digits (01.00), which is what the Vita requires."));
     m_windowTitle = addField(form, parent, QStringLiteral("Window title"),
-                             QStringLiteral("The title of the game's window on PC."));
+                             QStringLiteral("The title of the game's window on the desktop."));
     return page;
 }
 
