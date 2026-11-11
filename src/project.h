@@ -42,8 +42,6 @@ public:
     QString windowTitle() const;
     QString vitaTitleId() const;
     DisplaySettings display() const;
-    // Empty when the platform takes the display every platform shares.
-    std::optional<DisplaySettings> display(Platform platform) const;
 
     void setName(const QString &value);
     void setOrganization(const QString &value);
@@ -51,7 +49,8 @@ public:
     void setWindowTitle(const QString &value);
     void setVitaTitleId(const QString &value);
     void setDisplay(const DisplaySettings &value);
-    void setDisplay(Platform platform, const std::optional<DisplaySettings> &value);
+    // A display of a platform's own is no longer read by the engine, so saving takes any out.
+    void dropPlatformDisplays();
 
 private:
     QString m_directory;

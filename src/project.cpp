@@ -177,16 +177,6 @@ DisplaySettings Project::display() const
     return displayFrom(m_root.value(s_displayKey).toObject(), DisplaySettings());
 }
 
-std::optional<DisplaySettings> Project::display(Platform platform) const
-{
-    const QJsonValue own = m_root.value(platformKey(platform)).toObject().value(s_displayKey);
-    if (!own.isObject())
-    {
-        return std::nullopt;
-    }
-    return displayFrom(own.toObject(), display());
-}
-
 bool Project::save(QString *error) const
 {
     QSaveFile file(filePath());
@@ -282,16 +272,18 @@ void Project::setDisplay(const DisplaySettings &value)
     }
 }
 
-void Project::setDisplay(Platform platform, const std::optional<DisplaySettings> &value)
+void Project::dropPlatformDisplays()
 {
-    if (value == display(platform))
+    for (int index = 0; index < s_platformCount; ++index)
     {
-        return;
+        const Platform platform = static_cast<Platform>(index);
+        QJsonObject section = m_root.value(platformKey(platform)).toObject();
+        if (section.contains(s_displayKey))
+        {
+            section.remove(s_displayKey);
+            assign(m_root, platformKey(platform), section);
+        }
     }
-
-    QJsonObject section = m_root.value(platformKey(platform)).toObject();
-    assign(section, s_displayKey, value ? displayObject(*value) : QJsonObject());
-    assign(m_root, platformKey(platform), section);
 }
 
 // The size of a native display is never written, so it cannot make two differ.

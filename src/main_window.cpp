@@ -365,12 +365,7 @@ QWidget *MainWindow::buildDisplayPage()
     m_sharedDisplayEditor = new DisplayEditor(parent);
     connect(m_sharedDisplayEditor, &DisplayEditor::edited, this, &MainWindow::sharedDisplayEdited);
 
-    m_displayOverrides = new QLabel(parent);
-    m_displayOverrides->setWordWrap(true);
-
     content->addWidget(m_sharedDisplayEditor);
-    content->addSpacing(m_displayOverrides->fontMetrics().lineSpacing());
-    content->addWidget(m_displayOverrides);
     return page;
 }
 
@@ -487,7 +482,6 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         content->addWidget(buildBootScreen(parent));
     }
 
-    content->addWidget(buildPlatformDisplay(platform, parent));
     return page;
 }
 
@@ -538,24 +532,6 @@ QWidget *MainWindow::buildBootScreen(QWidget *parent)
     QHBoxLayout *layout = new QHBoxLayout(group);
     layout->addWidget(editor);
     layout->addStretch();
-    return group;
-}
-
-QWidget *MainWindow::buildPlatformDisplay(Platform platform, QWidget *parent)
-{
-    QGroupBox *group = new QGroupBox(QStringLiteral("Display"), parent);
-
-    PlatformDisplay &display = m_platformDisplayEditors[indexOf(platform)];
-    display.isOwn = new QCheckBox(QStringLiteral("Use a display of its own instead of the shared one"), group);
-    display.editor = new DisplayEditor(group);
-
-    QVBoxLayout *layout = new QVBoxLayout(group);
-    layout->addWidget(display.isOwn);
-    layout->addWidget(display.editor);
-
-    connect(display.isOwn, &QCheckBox::toggled, this,
-            [this, platform](bool isOwn) { ownDisplayToggled(platform, isOwn); });
-    connect(display.editor, &DisplayEditor::edited, this, [this, platform] { platformDisplayEdited(platform); });
     return group;
 }
 
@@ -649,37 +625,6 @@ void MainWindow::showDisplays()
 {
     m_sharedDisplayEditor->setDisplay(m_sharedDisplay);
 
-    QStringList overridden;
-    for (const Platform platform : s_platforms)
-    {
-        const std::optional<DisplaySettings> &own = m_platformDisplays[indexOf(platform)];
-        const PlatformDisplay &display = m_platformDisplayEditors[indexOf(platform)];
-
-        const QSignalBlocker blocker(display.isOwn);
-        display.isOwn->setChecked(own.has_value());
-        display.editor->setDisplay(own ? *own : m_sharedDisplay);
-        display.editor->setEnabled(own.has_value());
-
-        if (own)
-        {
-            overridden << platformName(platform);
-        }
-    }
-
-    if (overridden.isEmpty())
-    {
-        m_displayOverrides->setText(QStringLiteral("Every platform uses this display."));
-    }
-    else if (overridden.size() == s_platformCount)
-    {
-        m_displayOverrides->setText(QStringLiteral("Every platform has a display of its own, so this one is not "
-                                                   "used. Each platform's page says what it uses instead."));
-    }
-    else
-    {
-        m_displayOverrides->setText(QStringLiteral("Not used by %1, which have a display of their own.")
-                                        .arg(overridden.join(QStringLiteral(", "))));
-    }
 
     showUnsavedState();
 }
@@ -690,34 +635,9 @@ void MainWindow::sharedDisplayEdited()
     showDisplays();
 }
 
-void MainWindow::platformDisplayEdited(Platform platform)
-{
-    m_platformDisplays[indexOf(platform)] = m_platformDisplayEditors[indexOf(platform)].editor->display();
-    showUnsavedState();
-}
-
-// A platform's own display starts as a copy of the shared one.
-void MainWindow::ownDisplayToggled(Platform platform, bool isOwn)
-{
-    m_platformDisplays[indexOf(platform)] = isOwn ? std::optional<DisplaySettings>(m_sharedDisplay) : std::nullopt;
-    showDisplays();
-}
-
 bool MainWindow::hasUnsavedDisplay() const
 {
-    if (m_sharedDisplay != m_project.display())
-    {
-        return true;
-    }
-
-    for (const Platform platform : s_platforms)
-    {
-        if (m_platformDisplays[indexOf(platform)] != m_project.display(platform))
-        {
-            return true;
-        }
-    }
-    return false;
+    return m_sharedDisplay != m_project.display();
 }
 
 QString MainWindow::nearbyLocation() const
@@ -831,10 +751,6 @@ void MainWindow::showProject()
     m_vitaTitleId->setText(m_project.vitaTitleId());
 
     m_sharedDisplay = m_project.display();
-    for (const Platform platform : s_platforms)
-    {
-        m_platformDisplays[indexOf(platform)] = m_project.display(platform);
-    }
     showDisplays();
 
     showIcons();
@@ -1147,10 +1063,7 @@ bool MainWindow::saveProject()
     m_project.setWindowTitle(m_windowTitle->text());
     m_project.setVitaTitleId(m_vitaTitleId->text());
     m_project.setDisplay(m_sharedDisplay);
-    for (const Platform platform : s_platforms)
-    {
-        m_project.setDisplay(platform, m_platformDisplays[indexOf(platform)]);
-    }
+    m_project.dropPlatformDisplays();
 
     QString error;
     if (!m_project.save(&error))

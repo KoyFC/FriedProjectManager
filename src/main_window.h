@@ -37,12 +37,6 @@ public:
     bool saveProject();
 
 private:
-    struct PlatformDisplay
-    {
-        QCheckBox *isOwn = nullptr;
-        DisplayEditor *editor = nullptr;
-    };
-
     void buildPages();
     QWidget *buildProjectView();
     QWidget *buildGeneralPage();
@@ -50,7 +44,6 @@ private:
     QWidget *buildIconsPage();
     QWidget *buildEnginePage();
     QWidget *buildPlatformPage(Platform platform);
-    QWidget *buildPlatformDisplay(Platform platform, QWidget *parent);
     QWidget *buildLiveArea(QWidget *parent);
     QWidget *buildBootScreen(QWidget *parent);
     QWidget *newPage(const QString &title, const QString &description, QVBoxLayout **content);
@@ -80,8 +73,6 @@ private:
     void showProject();
     void showDisplays();
     void sharedDisplayEdited();
-    void platformDisplayEdited(Platform platform);
-    void ownDisplayToggled(Platform platform, bool isOwn);
     bool hasUnsavedDisplay() const;
     bool hasUnsavedFiles() const;
     bool writeFiles();
@@ -112,12 +103,9 @@ private:
     QLabel *m_engineVersion = nullptr;
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;
-    QLabel *m_displayOverrides = nullptr;
-    std::array<PlatformDisplay, s_platformCount> m_platformDisplayEditors = {};
     QList<ImageFileEditor *> m_imageEditors;
     LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;
 
     // The form's edits to every platform's display, until they are saved.
     DisplaySettings m_sharedDisplay;
-    std::array<std::optional<DisplaySettings>, s_platformCount> m_platformDisplays;
 };
