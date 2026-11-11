@@ -41,6 +41,8 @@ public:
     QString version() const;
     QString windowTitle() const;
     QString vitaTitleId() const;
+    // A line of packaging text a platform's section may give, empty when it falls back to the game's identity.
+    QString packagingText(const QString &section, const QString &key) const;
     DisplaySettings display() const;
 
     void setName(const QString &value);
@@ -48,6 +50,7 @@ public:
     void setVersion(const QString &value);
     void setWindowTitle(const QString &value);
     void setVitaTitleId(const QString &value);
+    void setPackagingText(const QString &section, const QString &key, const QString &value);
     void setDisplay(const DisplaySettings &value);
     // A display of a platform's own is no longer read by the engine, so saving takes any out.
     void dropPlatformDisplays();

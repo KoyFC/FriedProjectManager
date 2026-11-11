@@ -459,11 +459,11 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         break;
     case Platform::Nintendo3ds:
         description = QStringLiteral("A 3DS .3dsx is labelled with the name, organization and version on the "
-                                     "General page.");
+                                     "General page, and a description line of its own below.");
         break;
     case Platform::NintendoDs:
-        description = QStringLiteral("A DS .nds is labelled with the name, organization and version on the General "
-                                     "page.");
+        description = QStringLiteral("A DS .nds is labelled with the name on the General page, and its banner's other "
+                                     "two lines below.");
         break;
     case Platform::Cg50:
         description = QStringLiteral("An fx-CG50 .g3a is labelled with the name on the General page. Its assets go "
@@ -481,6 +481,10 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
 
     content->addWidget(helpLabel(QStringLiteral("Choosing this platform makes it the target of the build bar below, which remembers its build type, directory and log for this project."), parent));
     content->addWidget(buildPlatformIcon(platform, parent));
+    if (QWidget *packaging = buildPackagingText(platform, parent))
+    {
+        content->addWidget(packaging);
+    }
 
     if (platform == Platform::Vita)
     {
@@ -690,6 +694,64 @@ void MainWindow::changePlatformIcon(Platform platform)
     QMessageBox::information(this, s_applicationTitle, (Icon::describe(rendered) + QChar(' ') + notes.join(QChar(' '))).trimmed());
 }
 
+// The limits are what the package holds: an SMDH's description is 128 characters, and a DS banner line is kept to 31.
+QWidget *MainWindow::buildPackagingText(Platform platform, QWidget *parent)
+{
+    struct Line
+    {
+        QString key;
+        QString label;
+        int limit;
+        QString help;
+    };
+
+    QList<Line> lines;
+    QString section;
+    if (platform == Platform::Nintendo3ds)
+    {
+        section = QStringLiteral("3ds");
+        lines = {{QStringLiteral("description"), QStringLiteral("Description"), 128,
+                  QStringLiteral("The line under the name in the Home Menu. At most 128 characters.")}};
+    }
+    else if (platform == Platform::NintendoDs)
+    {
+        section = QStringLiteral("nds");
+        lines = {{QStringLiteral("subtitle1"), QStringLiteral("Second line"), 31,
+                  QStringLiteral("The banner's second line. At most 31 characters.")},
+                 {QStringLiteral("subtitle2"), QStringLiteral("Third line"), 31,
+                  QStringLiteral("The banner's third line. At most 31 characters.")}};
+    }
+    else
+    {
+        return nullptr;
+    }
+
+    QGroupBox *group = new QGroupBox(QStringLiteral("Package text"), parent);
+    QFormLayout *form = new QFormLayout(group);
+    for (const Line &line : lines)
+    {
+        QLineEdit *edit = addField(form, group, line.label, line.help);
+        // Typing or pasting past the limit stops there, so the text can never be one the engine refuses.
+        edit->setMaxLength(line.limit);
+        m_packagingFields.append({section, line.key, edit});
+    }
+
+    // What an empty line falls back to follows the identity it comes from.
+    connect(m_organization, &QLineEdit::textChanged, this, &MainWindow::showPackagingPlaceholders);
+    connect(m_version, &QLineEdit::textChanged, this, &MainWindow::showPackagingPlaceholders);
+    showPackagingPlaceholders();
+    return group;
+}
+
+void MainWindow::showPackagingPlaceholders()
+{
+    const QString version = QStringLiteral("Version %1").arg(m_version->text());
+    for (const PackagingField &field : std::as_const(m_packagingFields))
+    {
+        field.edit->setPlaceholderText(field.key == QStringLiteral("subtitle1") ? m_organization->text() : version);
+    }
+}
+
 QWidget *MainWindow::buildPlatformIcon(Platform platform, QWidget *parent)
 {
     QGroupBox *group = new QGroupBox(QStringLiteral("Icon"), parent);
@@ -843,6 +905,11 @@ void MainWindow::showProject()
     m_version->setText(m_project.version());
     m_windowTitle->setText(m_project.windowTitle());
     m_vitaTitleId->setText(m_project.vitaTitleId());
+    for (const PackagingField &field : std::as_const(m_packagingFields))
+    {
+        field.edit->setText(m_project.packagingText(field.section, field.key));
+    }
+    showPackagingPlaceholders();
 
     m_sharedDisplay = m_project.display();
     showDisplays();
@@ -875,8 +942,21 @@ bool MainWindow::hasUnsavedEdits() const
            || m_version->text() != m_project.version()
            || m_windowTitle->text() != m_project.windowTitle()
            || m_vitaTitleId->text() != m_project.vitaTitleId()
+           || hasUnsavedPackagingText()
            || hasUnsavedDisplay()
            || hasUnsavedFiles();
+}
+
+bool MainWindow::hasUnsavedPackagingText() const
+{
+    for (const PackagingField &field : m_packagingFields)
+    {
+        if (field.edit->text() != m_project.packagingText(field.section, field.key))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool MainWindow::hasUnsavedFiles() const
@@ -1157,6 +1237,10 @@ bool MainWindow::saveProject()
     m_project.setVersion(m_version->text());
     m_project.setWindowTitle(m_windowTitle->text());
     m_project.setVitaTitleId(m_vitaTitleId->text());
+    for (const PackagingField &field : m_packagingFields)
+    {
+        m_project.setPackagingText(field.section, field.key, field.edit->text());
+    }
     m_project.setDisplay(m_sharedDisplay);
     m_project.dropPlatformDisplays();
 

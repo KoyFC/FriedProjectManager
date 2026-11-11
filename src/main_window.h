@@ -38,6 +38,14 @@ public:
     bool saveProject();
 
 private:
+    // Text only one platform's package shows, which falls back to the game's identity while empty.
+    struct PackagingField
+    {
+        QString section;
+        QString key;
+        QLineEdit *edit = nullptr;
+    };
+
     void buildPages();
     QWidget *buildProjectView();
     QWidget *buildGeneralPage();
@@ -46,6 +54,8 @@ private:
     QWidget *buildEnginePage();
     QWidget *buildPlatformPage(Platform platform);
     QWidget *buildPlatformIcon(Platform platform, QWidget *parent);
+    QWidget *buildPackagingText(Platform platform, QWidget *parent);
+    void showPackagingPlaceholders();
     QWidget *buildLiveArea(QWidget *parent);
     QWidget *buildBootScreen(QWidget *parent);
     QWidget *newPage(const QString &title, const QString &description, QVBoxLayout **content);
@@ -79,6 +89,7 @@ private:
     void showDisplays();
     void sharedDisplayEdited();
     bool hasUnsavedDisplay() const;
+    bool hasUnsavedPackagingText() const;
     bool hasUnsavedFiles() const;
     bool writeFiles();
     QString firstProblem(QLineEdit **field) const;
@@ -107,6 +118,7 @@ private:
     QLineEdit *m_vitaTitleId = nullptr;
     std::array<QLabel *, s_platformCount> m_iconPreviews = {};
     std::array<QLabel *, s_platformCount> m_platformIconPreviews = {};
+    QList<PackagingField> m_packagingFields;
     QLabel *m_engineVersion = nullptr;
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;

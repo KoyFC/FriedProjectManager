@@ -258,6 +258,16 @@ void Project::setWindowTitle(const QString &value)
     assignNested(m_root, QStringLiteral("window"), QStringLiteral("title"), value);
 }
 
+QString Project::packagingText(const QString &section, const QString &key) const
+{
+    return nested(m_root, section, key);
+}
+
+void Project::setPackagingText(const QString &section, const QString &key, const QString &value)
+{
+    assignNested(m_root, section, key, value);
+}
+
 void Project::setVitaTitleId(const QString &value)
 {
     assignNested(m_root, QStringLiteral("vita"), QStringLiteral("titleId"), value);
