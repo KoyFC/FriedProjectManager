@@ -29,6 +29,8 @@ DisplayEditor::DisplayEditor(QWidget *parent)
          QStringLiteral("Like Fit, but only by whole multiples, so every pixel stays the same size.")},
         {QStringLiteral("Expand"), QStringLiteral("expand"),
          QStringLiteral("Like Fit, but the game sees more on the longer side instead of black bars.")},
+        {QStringLiteral("Pixel"), QStringLiteral("pixel"),
+         QStringLiteral("Scales by whole multiples that never drop below 1x. A small screen shows less of the world instead of a shrunken one.")},
         {QStringLiteral("Stretch"), QStringLiteral("stretch"),
          QStringLiteral("Fills the screen with the game's size, distorting its shape.")},
     };
