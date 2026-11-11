@@ -1,5 +1,7 @@
 #include "main_window.h"
 
+#include "asset_check.h"
+#include "asset_panel.h"
 #include "build.h"
 #include "build_bar.h"
 #include "command_dialog.h"
@@ -285,6 +287,7 @@ QListWidget *MainWindow::newSectionList(QWidget *parent)
         if (platform.isValid() && m_buildBar)
         {
             m_buildBar->selectPlatform(static_cast<Platform>(platform.toInt()));
+            refreshAssetPanel(static_cast<Platform>(platform.toInt()));
         }
     });
 
@@ -501,6 +504,13 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         content->addWidget(buildBootScreen(parent));
     }
 
+    if (AssetCheck::appliesTo(platform))
+    {
+        AssetPanel *assets = new AssetPanel(platform, parent);
+        m_assetPanels[indexOf(platform)] = assets;
+        content->addWidget(assets);
+    }
+
     ToolchainPanel *toolchain = new ToolchainPanel(platform, m_buildBar, parent);
     connect(toolchain, &ToolchainPanel::downloadRequested, this, [this](BuildTarget target) {
         if (Build::needsCompilerDownload(target) ? downloadCompiler() : downloadEmscripten())
@@ -510,6 +520,7 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     });
     m_toolchainPanels[indexOf(platform)] = toolchain;
     content->addWidget(toolchain);
+
 
     return page;
 }
@@ -567,6 +578,14 @@ QWidget *MainWindow::buildBootScreen(QWidget *parent)
 void MainWindow::refreshToolchains()
 {
     for (ToolchainPanel *panel : m_toolchainPanels)
+    {
+        panel->setProjectDirectory(m_project.directory());
+    }
+}
+
+void MainWindow::refreshAssetPanel(Platform platform)
+{
+    if (AssetPanel *panel = m_assetPanels[indexOf(platform)])
     {
         panel->setProjectDirectory(m_project.directory());
     }

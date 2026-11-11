@@ -17,6 +17,10 @@ qt_add_executable(fried_project_manager
     src/build.h
     src/build.cpp
     src/build_target.h
+    src/asset_check.h
+    src/asset_check.cpp
+    src/asset_panel.h
+    src/asset_panel.cpp
     src/build_bar.h
     src/build_bar.cpp
     src/command_dialog.h

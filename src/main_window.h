@@ -8,6 +8,7 @@
 #include <array>
 #include <optional>
 
+class AssetPanel;
 class BuildBar;
 class ToolchainPanel;
 class DisplayEditor;
@@ -71,6 +72,7 @@ private:
     void buildProject();
     void openInEditor();
     void refreshToolchains();
+    void refreshAssetPanel(Platform platform);
     bool downloadCompiler();
     bool downloadEmscripten();
     void showStorage();
@@ -103,6 +105,7 @@ private:
     QStackedWidget *m_sections = nullptr;
     BuildBar *m_buildBar = nullptr;
     std::array<ToolchainPanel *, s_platformCount> m_toolchainPanels = {};
+    std::array<AssetPanel *, s_platformCount> m_assetPanels = {};
     QPushButton *m_saveButton = nullptr;
 
     QAction *m_build = nullptr;
