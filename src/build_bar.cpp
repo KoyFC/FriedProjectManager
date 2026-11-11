@@ -185,6 +185,7 @@ void BuildBar::showRemembered()
 
     // The text may not have changed, but the target it is checked against has.
     directoryChanged();
+    emit changed();
 }
 
 void BuildBar::showDirectory(const QString &directory)
@@ -235,6 +236,7 @@ void BuildBar::rememberType()
 
     QSettings settings;
     settings.setValue(typeKey(m_projectDirectory, target()), Build::name(type()));
+    emit changed();
 }
 
 void BuildBar::rememberLogToFile()
@@ -246,6 +248,7 @@ void BuildBar::rememberLogToFile()
 
     QSettings settings;
     settings.setValue(logToFileKey(m_projectDirectory, target()), logToFile());
+    emit changed();
 }
 
 void BuildBar::rememberDirectory()
@@ -257,6 +260,7 @@ void BuildBar::rememberDirectory()
 
     QSettings settings;
     settings.setValue(directoryKey(m_projectDirectory, target()), directory());
+    emit changed();
 }
 
 // VitaSDK hands vita-pack-vpk every path unquoted, so a space splits an argument.

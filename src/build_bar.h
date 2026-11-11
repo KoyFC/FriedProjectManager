@@ -34,6 +34,10 @@ public:
 
     void remember();
 
+signals:
+    // The target, type, log choice or directory shown is not the one before.
+    void changed();
+
 private:
     void showRemembered();
     void showDirectory(const QString &directory);

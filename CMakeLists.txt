@@ -64,6 +64,8 @@ qt_add_executable(fried_project_manager
     src/recent_projects.cpp
     src/storage.h
     src/storage.cpp
+    src/toolchain_panel.h
+    src/toolchain_panel.cpp
     src/storage_dialog.h
     src/storage_dialog.cpp
     src/emscripten_sdk.h

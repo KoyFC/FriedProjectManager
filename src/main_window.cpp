@@ -6,6 +6,7 @@
 #include "display_editor.h"
 #include "emscripten_sdk.h"
 #include "storage_dialog.h"
+#include "toolchain_panel.h"
 #include "engine_version.h"
 #include "engine_version_dialog.h"
 #include "help_label.h"
@@ -141,6 +142,10 @@ QWidget *MainWindow::buildProjectView()
 {
     QWidget *view = new QWidget(this);
 
+    // The platform pages show the toolchain the bar would build with, so it exists before them.
+    m_buildBar = new BuildBar(view, m_build);
+    connect(m_buildBar, &BuildBar::changed, this, &MainWindow::refreshToolchains);
+
     m_sections = new QStackedWidget(view);
 
     // One panel holding two lists, so the heading between them is a label and not a row.
@@ -216,8 +221,6 @@ QWidget *MainWindow::buildProjectView()
     QFrame *separator = new QFrame(view);
     separator->setFrameShape(QFrame::HLine);
     separator->setFrameShadow(QFrame::Sunken);
-
-    m_buildBar = new BuildBar(view, m_build);
 
     QVBoxLayout *layout = new QVBoxLayout(view);
     layout->addLayout(body, 1);
@@ -493,6 +496,16 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         content->addWidget(buildBootScreen(parent));
     }
 
+    ToolchainPanel *toolchain = new ToolchainPanel(platform, m_buildBar, parent);
+    connect(toolchain, &ToolchainPanel::downloadRequested, this, [this](BuildTarget target) {
+        if (Build::needsCompilerDownload(target) ? downloadCompiler() : downloadEmscripten())
+        {
+            refreshToolchains();
+        }
+    });
+    m_toolchainPanels[indexOf(platform)] = toolchain;
+    content->addWidget(toolchain);
+
     return page;
 }
 
@@ -544,6 +557,14 @@ QWidget *MainWindow::buildBootScreen(QWidget *parent)
     layout->addWidget(editor);
     layout->addStretch();
     return group;
+}
+
+void MainWindow::refreshToolchains()
+{
+    for (ToolchainPanel *panel : m_toolchainPanels)
+    {
+        panel->setProjectDirectory(m_project.directory());
+    }
 }
 
 void MainWindow::showHome()
@@ -771,6 +792,7 @@ void MainWindow::showProject()
     }
     m_liveAreaTemplate->setProjectDirectory(m_project.directory());
     m_buildBar->setProjectDirectory(m_project.directory());
+    refreshToolchains();
     showEngineVersion();
 
     m_pages->setCurrentWidget(m_projectView);

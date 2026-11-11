@@ -9,6 +9,7 @@
 #include <optional>
 
 class BuildBar;
+class ToolchainPanel;
 class DisplayEditor;
 class HomePage;
 class ImageFileEditor;
@@ -58,6 +59,7 @@ private:
     bool confirmGitNotice();
     void buildProject();
     void openInEditor();
+    void refreshToolchains();
     bool downloadCompiler();
     bool downloadEmscripten();
     void showStorage();
@@ -86,6 +88,7 @@ private:
     QList<QListWidget *> m_sectionLists;
     QStackedWidget *m_sections = nullptr;
     BuildBar *m_buildBar = nullptr;
+    std::array<ToolchainPanel *, s_platformCount> m_toolchainPanels = {};
     QPushButton *m_saveButton = nullptr;
 
     QAction *m_build = nullptr;
