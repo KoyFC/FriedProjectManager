@@ -474,7 +474,7 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
                                      "are copied to the root of the calculator's storage.");
         break;
     default:
-        description = QStringLiteral("The game as a desktop executable.");
+        description = QStringLiteral("The game on the desktop: built for this system, for Windows from another system, and for the web.");
         break;
     }
 

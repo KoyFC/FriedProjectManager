@@ -65,5 +65,11 @@ inline QString buildTargetName(BuildTarget target)
     {
         return QStringLiteral("Web");
     }
-    return target == BuildTarget::WindowsFromHost ? QStringLiteral("Windows") : platformName(platformOf(target));
+    if (target == BuildTarget::WindowsFromHost)
+    {
+        return QStringLiteral("Windows");
+    }
+
+    // The PC page covers every desktop target, so the target itself is named for the system it builds for.
+    return target == BuildTarget::Pc ? hostSystemName() : platformName(platformOf(target));
 }

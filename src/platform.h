@@ -50,13 +50,18 @@ inline QString platformName(Platform platform)
     case Platform::Cg50:
         return QStringLiteral("Casio fx-CG50");
     default:
-        // The desktop is named for the system running the tool, which is the one a PC build targets.
-#if defined(Q_OS_WIN)
-        return QStringLiteral("Windows");
-#elif defined(Q_OS_MACOS)
-        return QStringLiteral("macOS");
-#else
-        return QStringLiteral("Linux");
-#endif
+        return QStringLiteral("PC");
     }
+}
+
+// The system running the tool, which is the one the PC target builds for.
+inline QString hostSystemName()
+{
+#if defined(Q_OS_WIN)
+    return QStringLiteral("Windows");
+#elif defined(Q_OS_MACOS)
+    return QStringLiteral("macOS");
+#else
+    return QStringLiteral("Linux");
+#endif
 }
