@@ -730,15 +730,15 @@ QWidget *MainWindow::buildPackagingText(Platform platform, QWidget *parent)
     {
         section = QStringLiteral("3ds");
         lines = {{QStringLiteral("description"), QStringLiteral("Description"), 128,
-                  QStringLiteral("The line under the name in the Home Menu. At most 128 characters.")}};
+                  QStringLiteral("Empty shows the version. At most 128 characters.")}};
     }
     else if (platform == Platform::NintendoDs)
     {
         section = QStringLiteral("nds");
         lines = {{QStringLiteral("subtitle1"), QStringLiteral("Second line"), 31,
-                  QStringLiteral("The banner's second line. At most 31 characters.")},
+                  QStringLiteral("Empty shows the organization. At most 31 characters.")},
                  {QStringLiteral("subtitle2"), QStringLiteral("Third line"), 31,
-                  QStringLiteral("The banner's third line. At most 31 characters.")}};
+                  QStringLiteral("Empty shows the version. At most 31 characters.")}};
     }
     else
     {
