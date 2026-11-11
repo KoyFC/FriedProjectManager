@@ -13,5 +13,12 @@ int main(int argc, char *argv[])
     MainWindow window;
     window.show();
 
+    // A project's folder on the command line opens it straight away.
+    const QStringList arguments = application.arguments();
+    if (arguments.size() > 1)
+    {
+        window.openProject(arguments.at(1));
+    }
+
     return application.exec();
 }
