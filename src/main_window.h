@@ -45,6 +45,7 @@ private:
     QWidget *buildIconsPage();
     QWidget *buildEnginePage();
     QWidget *buildPlatformPage(Platform platform);
+    QWidget *buildPlatformIcon(Platform platform, QWidget *parent);
     QWidget *buildLiveArea(QWidget *parent);
     QWidget *buildBootScreen(QWidget *parent);
     QWidget *newPage(const QString &title, const QString &description, QVBoxLayout **content);
@@ -65,6 +66,8 @@ private:
     void showStorage();
     void chooseIcon();
     void showIcons();
+    void showIconIn(QLabel *preview, Platform platform);
+    void changePlatformIcon(Platform platform);
     void showEngineVersion();
     void changeEngineVersion();
     bool confirmUnsavedEdits();
@@ -103,6 +106,7 @@ private:
     QLineEdit *m_windowTitle = nullptr;
     QLineEdit *m_vitaTitleId = nullptr;
     std::array<QLabel *, s_platformCount> m_iconPreviews = {};
+    std::array<QLabel *, s_platformCount> m_platformIconPreviews = {};
     QLabel *m_engineVersion = nullptr;
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;

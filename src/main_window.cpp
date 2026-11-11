@@ -480,6 +480,7 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     QWidget *parent = content->parentWidget();
 
     content->addWidget(helpLabel(QStringLiteral("Choosing this platform makes it the target of the build bar below, which remembers its build type, directory and log for this project."), parent));
+    content->addWidget(buildPlatformIcon(platform, parent));
 
     if (platform == Platform::Vita)
     {
@@ -631,26 +632,87 @@ void MainWindow::chooseIcon()
 
 void MainWindow::showIcons()
 {
-    const QDir directory(m_project.directory());
     for (const Platform platform : s_platforms)
     {
-        QLabel *preview = m_iconPreviews[indexOf(platform)];
-        const QImage icon(directory.filePath(Icon::path(platform)));
-        if (icon.isNull())
-        {
-            preview->setPixmap(QPixmap());
-            preview->setText(QStringLiteral("none"));
-            continue;
-        }
-
-        // A small console icon is shown at its own size rather than blurred up.
-        const QPixmap pixmap = QPixmap::fromImage(icon);
-        preview->setPixmap(pixmap.width() > s_iconPreviewSize
-                               ? pixmap.scaled(s_iconPreviewSize, s_iconPreviewSize, Qt::KeepAspectRatio,
-                                               Qt::SmoothTransformation)
-                               : pixmap);
-        preview->setToolTip(QStringLiteral("%1x%2").arg(icon.width()).arg(icon.height()));
+        showIconIn(m_iconPreviews[indexOf(platform)], platform);
+        showIconIn(m_platformIconPreviews[indexOf(platform)], platform);
     }
+}
+
+void MainWindow::showIconIn(QLabel *preview, Platform platform)
+{
+    const QImage icon(QDir(m_project.directory()).filePath(Icon::path(platform)));
+    if (icon.isNull())
+    {
+        preview->setPixmap(QPixmap());
+        preview->setText(QStringLiteral("none"));
+        return;
+    }
+
+    // A small console icon is shown at its own size rather than blurred up.
+    const QPixmap pixmap = QPixmap::fromImage(icon);
+    preview->setPixmap(pixmap.width() > s_iconPreviewSize
+                           ? pixmap.scaled(s_iconPreviewSize, s_iconPreviewSize, Qt::KeepAspectRatio,
+                                           Qt::SmoothTransformation)
+                           : pixmap);
+    preview->setToolTip(QStringLiteral("%1x%2").arg(icon.width()).arg(icon.height()));
+}
+
+// One platform's icon from an image of the user's choice, written at once like the dialog's Write.
+void MainWindow::changePlatformIcon(Platform platform)
+{
+    const QString chosen = QFileDialog::getOpenFileName(
+        this, QStringLiteral("Choose an icon image"), LastLocation::of(LastLocation::Kind::Images, m_project.directory()),
+        QStringLiteral("Images (%1)").arg(ImageConversion::readablePatterns().join(QChar(' '))));
+    if (chosen.isEmpty())
+    {
+        return;
+    }
+    LastLocation::rememberFolderOf(LastLocation::Kind::Images, chosen);
+
+    QString error;
+    const QImage source = ImageConversion::read(chosen, &error);
+    if (source.isNull())
+    {
+        QMessageBox::warning(this, s_applicationTitle, error);
+        return;
+    }
+
+    QStringList notes;
+    const QMap<Platform, QImage> rendered = {{platform, Icon::render(platform, source, &notes)}};
+    if (!Icon::write(m_project.directory(), rendered, &error))
+    {
+        QMessageBox::warning(this, s_applicationTitle, error);
+        return;
+    }
+
+    showIcons();
+    QMessageBox::information(this, s_applicationTitle, (Icon::describe(rendered) + QChar(' ') + notes.join(QChar(' '))).trimmed());
+}
+
+QWidget *MainWindow::buildPlatformIcon(Platform platform, QWidget *parent)
+{
+    QGroupBox *group = new QGroupBox(QStringLiteral("Icon"), parent);
+
+    QLabel *preview = new QLabel(group);
+    preview->setFixedSize(s_iconPreviewSize, s_iconPreviewSize);
+    preview->setAlignment(Qt::AlignCenter);
+    preview->setFrameShape(QFrame::StyledPanel);
+    m_platformIconPreviews[indexOf(platform)] = preview;
+
+    QPushButton *change = new QPushButton(QStringLiteral("Change Icon..."), group);
+    change->setToolTip(QStringLiteral("Write this platform's icon from an image, at the size and in the format it reads."));
+    connect(change, &QPushButton::clicked, this, [this, platform] { changePlatformIcon(platform); });
+
+    QVBoxLayout *text = new QVBoxLayout;
+    text->addWidget(helpLabel(Icon::path(platform), group));
+    text->addWidget(change, 0, Qt::AlignLeft);
+    text->addStretch();
+
+    QHBoxLayout *layout = new QHBoxLayout(group);
+    layout->addWidget(preview);
+    layout->addLayout(text, 1);
+    return group;
 }
 
 void MainWindow::showDisplays()
