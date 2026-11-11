@@ -31,6 +31,8 @@ DisplayEditor::DisplayEditor(QWidget *parent)
          QStringLiteral("Like Fit, but the game sees more on the longer side instead of black bars.")},
         {QStringLiteral("Pixel"), QStringLiteral("pixel"),
          QStringLiteral("Scales by whole multiples that never drop below 1x. A small screen shows less of the world instead of a shrunken one.")},
+        {QStringLiteral("Fixed height"), QStringLiteral("height"),
+         QStringLiteral("The game always sees the height it is designed for, and the width follows each screen's shape. The scale is not a whole number in general.")},
         {QStringLiteral("Stretch"), QStringLiteral("stretch"),
          QStringLiteral("Fills the screen with the game's size, distorting its shape.")},
     };
