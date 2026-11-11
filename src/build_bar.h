@@ -23,6 +23,9 @@ public:
     void setProjectDirectory(const QString &directory);
 
     BuildTarget target() const;
+
+    // Switches to the first target that builds the platform, unless the current one already does, so choosing the PC page keeps a Windows or web target.
+    void selectPlatform(Platform platform);
     Build::Type type() const;
     bool logToFile() const;
 

@@ -60,6 +60,7 @@ namespace
     const QString s_gitNoticeKey = QStringLiteral("newProject/showGitNotice");
 
     constexpr int s_sectionRole = Qt::UserRole;
+    constexpr int s_platformRole = Qt::UserRole + 1;
     constexpr int s_sectionListWidth = 170;
     constexpr int s_sectionPadding = 4;
     constexpr int s_iconPreviewSize = 96;
@@ -159,6 +160,7 @@ QWidget *MainWindow::buildProjectView()
     for (const Platform platform : s_platforms)
     {
         addSection(platforms, platformName(platform), buildPlatformPage(platform));
+        platforms->item(platforms->count() - 1)->setData(s_platformRole, static_cast<int>(platform));
     }
 
     QLabel *platformsHeading = helpLabel(QStringLiteral("PLATFORMS"), panel);
@@ -274,6 +276,13 @@ QListWidget *MainWindow::newSectionList(QWidget *parent)
             }
         }
         m_sections->setCurrentIndex(selected.first()->data(s_sectionRole).toInt());
+
+        // A platform's page is the build target, as in Unity's platform list.
+        const QVariant platform = selected.first()->data(s_platformRole);
+        if (platform.isValid() && m_buildBar)
+        {
+            m_buildBar->selectPlatform(static_cast<Platform>(platform.toInt()));
+        }
     });
 
     m_sectionLists << list;
@@ -466,6 +475,8 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     QVBoxLayout *content = nullptr;
     QWidget *page = newPage(platformName(platform), description, &content);
     QWidget *parent = content->parentWidget();
+
+    content->addWidget(helpLabel(QStringLiteral("Choosing this platform makes it the target of the build bar below, which remembers its build type, directory and log for this project."), parent));
 
     if (platform == Platform::Vita)
     {

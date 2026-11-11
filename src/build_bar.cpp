@@ -117,6 +117,23 @@ BuildTarget BuildBar::target() const
     return static_cast<BuildTarget>(m_target->currentData().toInt());
 }
 
+void BuildBar::selectPlatform(Platform platform)
+{
+    if (platformOf(target()) == platform)
+    {
+        return;
+    }
+
+    for (int index = 0; index < m_target->count(); ++index)
+    {
+        if (platformOf(static_cast<BuildTarget>(m_target->itemData(index).toInt())) == platform)
+        {
+            m_target->setCurrentIndex(index);
+            return;
+        }
+    }
+}
+
 Build::Type BuildBar::type() const
 {
     return static_cast<Build::Type>(m_type->currentIndex());
