@@ -1,0 +1,54 @@
+{
+	"camera": "camera",
+	"name": "Main",
+	"objects": [
+		{
+			"components": [
+				{
+					"type": "Transform",
+					"x": 480,
+					"y": 270
+				},
+				{
+					"type": "Camera",
+					"zoom": 1
+				}
+			],
+			"id": "camera",
+			"name": "Camera"
+		},
+		{
+			"components": [
+				{
+					"scaleX": 10,
+					"scaleY": 10,
+					"type": "Transform",
+					"x": 400,
+					"y": 190
+				},
+				{
+					"texture": {
+						"path": "white.png",
+						"root": "game"
+					},
+					"type": "Sprite"
+				}
+			],
+			"id": "square",
+			"name": "Square"
+		},
+		{
+			"components": [
+				{
+					"type": "Transform"
+				},
+				{
+					"type": "Quit"
+				}
+			],
+			"id": "quit",
+			"name": "Quit"
+		}
+	],
+	"version": 1
+}

@@ -27,12 +27,12 @@ cmake --build build
 
   ```
   .gitignore         .vscode/           assets/icon.png    sce_sys/
-  CMakeLists.txt     build.hxml         assets/white.png   src/Main.hx
-  3ds/icon.png                          project.fried      switch/icon.jpg
-  cg50/icon-uns.png  cg50/icon-sel.png  nds/icon.bmp
+  CMakeLists.txt     build.hxml         assets/white.png   src/components/
+  3ds/icon.png       editor.hxml        project.fried      switch/icon.jpg
+  cg50/icon-uns.png  cg50/icon-sel.png  nds/icon.bmp       assets/scenes/
   ```
 
-  `.vscode/` is the engine repository's configuration retargeted at the game. It debugs with gdb on Linux and with Visual Studio's debugger on Windows, so F5 on Windows needs Visual Studio's C++ tools and a `cmake` on the `PATH`, not the w64devkit the tool can download; a `build/` the tool configured with w64devkit has to be deleted before VS Code builds into it. The art in `assets/`, `sce_sys/`, `switch/`, `3ds/`, `nds/` and `cg50/` is flat white placeholder to replace.
+  The game has no `main` of its own: `build.hxml` names the engine's `fried.Entry`, which opens the window and loads the scene `project.fried` names, so what the game is made of is its components in `src/components/` and its scenes, made in [Fried Editor](https://github.com/KoyFC/FriedEditor), and updating the engine updates how a game starts. `.vscode/` marks `engine/` read-only, so the submodule is not edited by accident and an update still replaces it. `.vscode/` is the engine repository's configuration retargeted at the game. It debugs with gdb on Linux and with Visual Studio's debugger on Windows, so F5 on Windows needs Visual Studio's C++ tools and a `cmake` on the `PATH`, not the w64devkit the tool can download; a `build/` the tool configured with w64devkit has to be deleted before VS Code builds into it. The art in `assets/`, `sce_sys/`, `switch/`, `3ds/`, `nds/` and `cg50/` is flat white placeholder to replace.
 - **An open project** is a sidebar of pages: **General** for the game's identity, **Display**, **Icons**, **Engine**, and one page per platform with what only that platform declares. The build controls stay at the bottom whichever page is shown, and **Projects** above the sidebar goes back to the home screen.
 - **Open Project** and **Save** read and write `project.fried`, keeping any keys the tool does not know about. A project's folder given on the command line opens it at once. The window title is marked while the form holds unsaved edits. **Close Project** (Ctrl+W) goes back to the home screen. Anything that would discard unsaved edits offers to save them first.
 - **Open in Editor** (Ctrl+E, or the button at the top of the project sidebar) starts [Fried Editor](https://github.com/KoyFC/FriedEditor) on the project. The executable is found from the `FRIED_EDITOR` variable or a `FriedEditor` checkout built next to this repository, and asked for once, then remembered, when neither is there.

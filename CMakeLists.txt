@@ -101,13 +101,15 @@ qt_add_resources(fried_project_manager "templates"
         templates/project/nds/icon.bmp
         templates/project/assets/white.png
         templates/project/build.hxml
+        templates/project/editor.hxml
+        templates/project/assets/scenes/main.scene.json
         templates/project/project.fried
         templates/project/sce_sys/icon0.png
         templates/project/sce_sys/pic0.png
         templates/project/sce_sys/livearea/contents/bg.png
         templates/project/sce_sys/livearea/contents/startup.png
         templates/project/sce_sys/livearea/contents/template.xml
-        templates/project/src/Main.hx
+        templates/project/src/components/Quit.hx
         templates/project/switch/icon.jpg
 )
 

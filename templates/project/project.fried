@@ -5,41 +5,14 @@
 	"window": {
 		"title": "@NAME@"
 	},
-	"pc": {
-		"display": {
-			"mode": "default",
-			"filter": "nearest"
-		}
+	"startScene": "main",
+	"display": {
+		"width": 960,
+		"height": 540,
+		"mode": "expand",
+		"filter": "nearest"
 	},
 	"vita": {
-		"titleId": "@TITLE_ID@",
-		"display": {
-			"mode": "default",
-			"filter": "nearest"
-		}
-	},
-	"switch": {
-		"display": {
-			"mode": "default",
-			"filter": "nearest"
-		}
-	},
-	"3ds": {
-		"display": {
-			"mode": "default",
-			"filter": "nearest"
-		}
-	},
-	"nds": {
-		"display": {
-			"mode": "default",
-			"filter": "nearest"
-		}
-	},
-	"cg50": {
-		"display": {
-			"mode": "default",
-			"filter": "nearest"
-		}
+		"titleId": "@TITLE_ID@"
 	}
 }
