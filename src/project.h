@@ -10,7 +10,7 @@
 // The size is only a suggestion until a mode that uses it is picked.
 struct DisplaySettings
 {
-    QString m_mode = QStringLiteral("default");
+    QString m_mode = QStringLiteral("expand");
     int m_width = 640;
     int m_height = 360;
     QString m_filter = QStringLiteral("nearest");
