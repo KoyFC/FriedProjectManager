@@ -36,8 +36,8 @@ private:
     LiveAreaTemplate templateInForm() const;
     void formEdited();
     void replaceHandEdited();
-    void chooseColour(int line);
-    void showColour(int line);
+    void chooseColor(int line);
+    void showColor(int line);
     void showState();
 
     QString m_directory;
@@ -49,12 +49,12 @@ private:
     bool m_isShowing = false;
     QString m_contentRevision;
 
-    QRadioButton *m_centre = nullptr;
+    QRadioButton *m_center = nullptr;
     QRadioButton *m_right = nullptr;
     QWidget *m_lines = nullptr;
     std::array<QLineEdit *, LiveAreaTemplate::LineCount> m_texts = {};
-    std::array<QPushButton *, LiveAreaTemplate::LineCount> m_colourButtons = {};
-    std::array<QColor, LiveAreaTemplate::LineCount> m_colours = {};
+    std::array<QPushButton *, LiveAreaTemplate::LineCount> m_colorButtons = {};
+    std::array<QColor, LiveAreaTemplate::LineCount> m_colors = {};
     QLabel *m_status = nullptr;
     QPushButton *m_replace = nullptr;
 };

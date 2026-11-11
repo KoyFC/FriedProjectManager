@@ -61,7 +61,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     m_type = new QComboBox(this);
     m_type->insertItem(comboIndexOf(Build::Type::Debug), Build::name(Build::Type::Debug));
     m_type->insertItem(comboIndexOf(Build::Type::Release), Build::name(Build::Type::Release));
-    m_type->setToolTip(QStringLiteral("Debug keeps the symbols a debugger needs. Release optimises, which is "
+    m_type->setToolTip(QStringLiteral("Debug keeps the symbols a debugger needs. Release optimizes, which is "
                                       "what a build for players wants."));
 
     m_logToFile = new QCheckBox(QStringLiteral("Log to file"), this);

@@ -38,11 +38,11 @@ LiveAreaTemplateEditor::LiveAreaTemplateEditor(QWidget *parent)
     bold.setBold(true);
     heading->setFont(bold);
 
-    m_centre = new QRadioButton(QStringLiteral("Start button in the centre"), this);
+    m_center = new QRadioButton(QStringLiteral("Start button in the center"), this);
     m_right = new QRadioButton(QStringLiteral("Start button on the right, with text beside it"), this);
 
     QButtonGroup *styles = new QButtonGroup(this);
-    styles->addButton(m_centre);
+    styles->addButton(m_center);
     styles->addButton(m_right);
     connect(styles, &QButtonGroup::buttonToggled, this, [this](QAbstractButton *, bool checked) {
         if (checked)
@@ -60,12 +60,12 @@ LiveAreaTemplateEditor::LiveAreaTemplateEditor(QWidget *parent)
         m_texts[line]->setPlaceholderText(s_lineLabels[line].placeholder);
         connect(m_texts[line], &QLineEdit::textChanged, this, &LiveAreaTemplateEditor::formEdited);
 
-        m_colourButtons[line] = new QPushButton(QStringLiteral("Colour..."), m_lines);
-        connect(m_colourButtons[line], &QPushButton::clicked, this, [this, line] { chooseColour(line); });
+        m_colorButtons[line] = new QPushButton(QStringLiteral("Color..."), m_lines);
+        connect(m_colorButtons[line], &QPushButton::clicked, this, [this, line] { chooseColor(line); });
 
         QHBoxLayout *row = new QHBoxLayout;
         row->addWidget(m_texts[line], 1);
-        row->addWidget(m_colourButtons[line]);
+        row->addWidget(m_colorButtons[line]);
         lines->addRow(s_lineLabels[line].label, row);
     }
 
@@ -83,10 +83,10 @@ LiveAreaTemplateEditor::LiveAreaTemplateEditor(QWidget *parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(heading);
     layout->addWidget(helpLabel(QStringLiteral("Where the start button sits on the game's page, written to %1. "
-                                               "Text is shown in white unless given a colour.")
+                                               "Text is shown in white unless given a color.")
                                     .arg(LiveAreaTemplate::path()),
                                 this));
-    layout->addWidget(m_centre);
+    layout->addWidget(m_center);
     layout->addWidget(m_right);
     layout->addWidget(m_lines);
     layout->addWidget(m_status);
@@ -145,12 +145,12 @@ bool LiveAreaTemplateEditor::writePending(QString *error)
 void LiveAreaTemplateEditor::showTemplate(const LiveAreaTemplate &shown)
 {
     m_isShowing = true;
-    (shown.m_style == LiveAreaTemplate::Style::Right ? m_right : m_centre)->setChecked(true);
+    (shown.m_style == LiveAreaTemplate::Style::Right ? m_right : m_center)->setChecked(true);
     for (int line = 0; line < LiveAreaTemplate::LineCount; ++line)
     {
         m_texts[line]->setText(shown.m_lines[line].m_text);
-        m_colours[line] = shown.m_lines[line].m_colour.isValid() ? shown.m_lines[line].m_colour : QColor(Qt::white);
-        showColour(line);
+        m_colors[line] = shown.m_lines[line].m_color.isValid() ? shown.m_lines[line].m_color : QColor(Qt::white);
+        showColor(line);
     }
     m_isShowing = false;
 
@@ -160,13 +160,13 @@ void LiveAreaTemplateEditor::showTemplate(const LiveAreaTemplate &shown)
 LiveAreaTemplate LiveAreaTemplateEditor::templateInForm() const
 {
     LiveAreaTemplate inForm;
-    inForm.m_style = m_right->isChecked() ? LiveAreaTemplate::Style::Right : LiveAreaTemplate::Style::Centre;
+    inForm.m_style = m_right->isChecked() ? LiveAreaTemplate::Style::Right : LiveAreaTemplate::Style::Center;
     inForm.m_contentRevision = m_contentRevision;
 
-    // Text a centred layout cannot show stays in the fields, but is not part of the file.
+    // Text a centered layout cannot show stays in the fields, but is not part of the file.
     for (int line = 0; line < LiveAreaTemplate::LineCount && inForm.m_style == LiveAreaTemplate::Style::Right; ++line)
     {
-        inForm.m_lines[line] = {m_texts[line]->text().trimmed(), m_colours[line]};
+        inForm.m_lines[line] = {m_texts[line]->text().trimmed(), m_colors[line]};
     }
     return inForm;
 }
@@ -189,26 +189,26 @@ void LiveAreaTemplateEditor::replaceHandEdited()
     emit changed();
 }
 
-void LiveAreaTemplateEditor::chooseColour(int line)
+void LiveAreaTemplateEditor::chooseColor(int line)
 {
-    const QColor chosen = QColorDialog::getColor(m_colours[line], this,
-                                                 QStringLiteral("%1 Colour").arg(s_lineLabels[line].label));
-    if (!chosen.isValid() || chosen == m_colours[line])
+    const QColor chosen = QColorDialog::getColor(m_colors[line], this,
+                                                 QStringLiteral("%1 Color").arg(s_lineLabels[line].label));
+    if (!chosen.isValid() || chosen == m_colors[line])
     {
         return;
     }
 
-    m_colours[line] = chosen;
-    showColour(line);
+    m_colors[line] = chosen;
+    showColor(line);
     formEdited();
 }
 
-void LiveAreaTemplateEditor::showColour(int line)
+void LiveAreaTemplateEditor::showColor(int line)
 {
     QPixmap swatch(s_swatchSize, s_swatchSize);
-    swatch.fill(m_colours[line]);
-    m_colourButtons[line]->setIcon(QIcon(swatch));
-    m_colourButtons[line]->setToolTip(m_colours[line].name());
+    swatch.fill(m_colors[line]);
+    m_colorButtons[line]->setIcon(QIcon(swatch));
+    m_colorButtons[line]->setToolTip(m_colors[line].name());
 }
 
 void LiveAreaTemplateEditor::showState()
@@ -216,7 +216,7 @@ void LiveAreaTemplateEditor::showState()
     const bool isHandEdited = !m_problem.isEmpty() && !m_isReplacing;
     const bool hasRoomForText = m_right->isChecked();
 
-    m_centre->setEnabled(!isHandEdited);
+    m_center->setEnabled(!isHandEdited);
     m_right->setEnabled(!isHandEdited);
     m_lines->setEnabled(!isHandEdited && hasRoomForText);
     m_replace->setVisible(isHandEdited);
@@ -237,7 +237,7 @@ void LiveAreaTemplateEditor::showState()
     }
     else if (!hasRoomForText)
     {
-        status = QStringLiteral("A centred start button leaves no room for text.");
+        status = QStringLiteral("A centered start button leaves no room for text.");
     }
     m_status->setText(status);
     m_status->setVisible(!status.isEmpty());

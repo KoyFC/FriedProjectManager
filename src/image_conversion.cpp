@@ -11,9 +11,9 @@
 
 namespace
 {
-    constexpr int s_paletteColourLimit = 256;
+    constexpr int s_paletteColorLimit = 256;
 
-    int distinctColours(const QImage &image)
+    int distinctColors(const QImage &image)
     {
         const QImage rgb = image.convertToFormat(QImage::Format_ARGB32);
         QSet<QRgb> seen;
@@ -22,7 +22,7 @@ namespace
             for (int x = 0; x < rgb.width(); ++x)
             {
                 seen.insert(rgb.pixel(x, y));
-                if (seen.size() > s_paletteColourLimit)
+                if (seen.size() > s_paletteColorLimit)
                 {
                     return seen.size();
                 }
@@ -87,7 +87,7 @@ QImage ImageConversion::cropped(const QImage &image, const QSize &shape, QString
         kept.setHeight(int(qint64(image.width()) * shape.height() / shape.width()));
     }
 
-    *notes << QStringLiteral("Uses the centre %1x%2 of %3x%4.")
+    *notes << QStringLiteral("Uses the center %1x%2 of %3x%4.")
                   .arg(kept.width())
                   .arg(kept.height())
                   .arg(image.width())
@@ -112,12 +112,12 @@ QImage ImageConversion::resized(const QImage &image, const QSize &size, QStringL
 
 QImage ImageConversion::palette(const QImage &image, QStringList *notes)
 {
-    if (distinctColours(image) > s_paletteColourLimit)
+    if (distinctColors(image) > s_paletteColorLimit)
     {
-        *notes << QStringLiteral("Approximated to %1 colours, which is all a palette PNG holds.").arg(s_paletteColourLimit);
+        *notes << QStringLiteral("Approximated to %1 colors, which is all a palette PNG holds.").arg(s_paletteColorLimit);
     }
 
-    // Qt keeps every colour of an image that has at most 256 of them, and approximates the rest.
+    // Qt keeps every color of an image that has at most 256 of them, and approximates the rest.
     return image.convertToFormat(QImage::Format_Indexed8, Qt::AutoColor | Qt::ThresholdDither);
 }
 

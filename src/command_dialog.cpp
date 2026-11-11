@@ -133,10 +133,10 @@ void CommandDialog::reserveStatusWidth()
 void CommandDialog::showStatus(const QString &text, Line kind)
 {
     m_status->setText(text);
-    const QString colour =
+    const QString color =
         QStringLiteral("color: %1").arg(formatFor(kind, m_output->palette()).foreground().color().name());
-    m_status->setStyleSheet(colour);
-    m_elapsed->setStyleSheet(colour);
+    m_status->setStyleSheet(color);
+    m_elapsed->setStyleSheet(color);
 }
 
 void CommandDialog::showRunning()
@@ -199,7 +199,7 @@ QTextCharFormat CommandDialog::formatFor(Line kind, const QPalette &palette)
 
 // Every pattern here is something one of the three tools in the pipeline prints:
 // gcc and clang diagnostics, CMake's own messages and progress, and haxe, whose
-// errors carry no word for what they are and have to be recognised by shape.
+// errors carry no word for what they are and have to be recognized by shape.
 CommandDialog::Line CommandDialog::kindOf(const QString &line)
 {
     static const QRegularExpression haxeDiagnostic(QStringLiteral(R"(^\S+\.hx:\d+: )"));

@@ -11,7 +11,7 @@ struct LiveAreaTemplate
 {
     enum class Style
     {
-        Centre,
+        Center,
         Right
     };
 
@@ -26,12 +26,12 @@ struct LiveAreaTemplate
     struct Text
     {
         QString m_text;
-        QColor m_colour = Qt::white;
+        QColor m_color = Qt::white;
 
         bool operator==(const Text &other) const;
     };
 
-    Style m_style = Style::Centre;
+    Style m_style = Style::Center;
     std::array<Text, LineCount> m_lines;
     QString m_contentRevision = QStringLiteral("1");
 

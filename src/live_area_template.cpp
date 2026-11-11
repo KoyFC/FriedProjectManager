@@ -10,7 +10,7 @@
 
 namespace
 {
-    const QString s_centreStyle = QStringLiteral("a1");
+    const QString s_centerStyle = QStringLiteral("a1");
     const QString s_rightStyle = QStringLiteral("psmobile");
 
     using Attributes = QList<std::pair<QString, QString>>;
@@ -120,9 +120,9 @@ namespace
             if (reader.name() == QStringLiteral("livearea"))
             {
                 const QString style = reader.attributes().value(QStringLiteral("style")).toString();
-                *knownStyle = style == s_centreStyle || style == s_rightStyle;
+                *knownStyle = style == s_centerStyle || style == s_rightStyle;
                 parsed.m_style = style == s_rightStyle ? LiveAreaTemplate::Style::Right
-                                                       : LiveAreaTemplate::Style::Centre;
+                                                       : LiveAreaTemplate::Style::Center;
                 parsed.m_contentRevision =
                     reader.attributes().value(QStringLiteral("content-rev")).toString();
             }
@@ -133,10 +133,10 @@ namespace
             else if (reader.name() == QStringLiteral("str") && line >= 0 && parsed.m_lines[line].m_text.isEmpty())
             {
                 LiveAreaTemplate::Text &text = parsed.m_lines[line];
-                const QString colour = reader.attributes().value(QStringLiteral("color")).toString();
-                if (!colour.isEmpty())
+                const QString color = reader.attributes().value(QStringLiteral("color")).toString();
+                if (!color.isEmpty())
                 {
-                    text.m_colour = QColor(colour);
+                    text.m_color = QColor(color);
                 }
                 text.m_text = reader.readElementText().trimmed();
             }
@@ -147,7 +147,7 @@ namespace
 
 bool LiveAreaTemplate::Text::operator==(const Text &other) const
 {
-    return m_text == other.m_text && m_colour == other.m_colour;
+    return m_text == other.m_text && m_color == other.m_color;
 }
 
 bool LiveAreaTemplate::operator==(const LiveAreaTemplate &other) const
@@ -174,7 +174,7 @@ QByteArray LiveAreaTemplate::toXml() const
 
     writer.writeStartDocument();
     writer.writeStartElement(QStringLiteral("livearea"));
-    writer.writeAttribute(QStringLiteral("style"), m_style == Style::Right ? s_rightStyle : s_centreStyle);
+    writer.writeAttribute(QStringLiteral("style"), m_style == Style::Right ? s_rightStyle : s_centerStyle);
     writer.writeAttribute(QStringLiteral("format-ver"), QStringLiteral("01.00"));
     writer.writeAttribute(QStringLiteral("content-rev"), m_contentRevision);
 
@@ -186,7 +186,7 @@ QByteArray LiveAreaTemplate::toXml() const
     writer.writeTextElement(QStringLiteral("startup-image"), QStringLiteral("startup.png"));
     writer.writeEndElement();
 
-    // A centred start button leaves no room for text, so none is written.
+    // A centered start button leaves no room for text, so none is written.
     for (int line = 0; line < LineCount && m_style == Style::Right; ++line)
     {
         const Text &text = m_lines[line];
@@ -202,7 +202,7 @@ QByteArray LiveAreaTemplate::toXml() const
         writer.writeStartElement(QStringLiteral("text"));
         writeAttributes(writer, layout.text);
         writer.writeStartElement(QStringLiteral("str"));
-        writer.writeAttribute(QStringLiteral("color"), text.m_colour.name(QColor::HexRgb));
+        writer.writeAttribute(QStringLiteral("color"), text.m_color.name(QColor::HexRgb));
         writeAttributes(writer, layout.str);
         writer.writeCharacters(text.m_text);
         writer.writeEndElement();

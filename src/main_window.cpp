@@ -351,7 +351,7 @@ QWidget *MainWindow::buildGeneralPage()
 {
     QVBoxLayout *content = nullptr;
     QWidget *page = newPage(QStringLiteral("General"),
-                            QStringLiteral("The game's identity. Every platform's package is labelled with it."),
+                            QStringLiteral("The game's identity. Every platform's package is labeled with it."),
                             &content);
     QWidget *parent = content->parentWidget();
 
@@ -457,19 +457,19 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         description = QStringLiteral("What a PlayStation Vita package declares beyond the game's identity.");
         break;
     case Platform::Switch:
-        description = QStringLiteral("A Switch .nro is labelled with the name, organization and version on the "
+        description = QStringLiteral("A Switch .nro is labeled with the name, organization and version on the "
                                      "General page.");
         break;
     case Platform::Nintendo3ds:
-        description = QStringLiteral("A 3DS .3dsx is labelled with the name, organization and version on the "
+        description = QStringLiteral("A 3DS .3dsx is labeled with the name, organization and version on the "
                                      "General page, and a description line of its own below.");
         break;
     case Platform::NintendoDs:
-        description = QStringLiteral("A DS .nds is labelled with the name on the General page, and its banner's other "
+        description = QStringLiteral("A DS .nds is labeled with the name on the General page, and its banner's other "
                                      "two lines below.");
         break;
     case Platform::Cg50:
-        description = QStringLiteral("An fx-CG50 .g3a is labelled with the name on the General page. Its assets go "
+        description = QStringLiteral("An fx-CG50 .g3a is labeled with the name on the General page. Its assets go "
                                      "beside it, in a folder of that name the build writes next to it, and both "
                                      "are copied to the root of the calculator's storage.");
         break;
@@ -546,7 +546,7 @@ QWidget *MainWindow::buildLiveArea(QWidget *parent)
 
     QVBoxLayout *layout = new QVBoxLayout(group);
     layout->addWidget(helpLabel(QStringLiteral("The game's page on the Vita's home screen. Images are cut to shape, "
-                                               "resized and reduced to 256 colours, which is what the console reads."),
+                                               "resized and reduced to 256 colors, which is what the console reads."),
                                 group));
     layout->addLayout(images);
     layout->addSpacing(layout->spacing());

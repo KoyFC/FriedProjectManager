@@ -12,9 +12,9 @@ inline QLabel *helpLabel(const QString &text, QWidget *parent)
     help->setWordWrap(true);
 
     QPalette palette = help->palette();
-    QColor colour = palette.color(QPalette::WindowText);
-    colour.setAlphaF(0.65f);
-    palette.setColor(QPalette::WindowText, colour);
+    QColor color = palette.color(QPalette::WindowText);
+    color.setAlphaF(0.65f);
+    palette.setColor(QPalette::WindowText, color);
     help->setPalette(palette);
     return help;
 }
