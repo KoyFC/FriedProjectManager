@@ -139,22 +139,6 @@ bool WindowsToolchain::finishInstall(bool unpacked, QString *error)
     return true;
 }
 
-QList<QStringList> WindowsToolchain::w64devkitPipeline(const QStringList &haxe, const QString &buildTree,
-                                                         const QString &buildType)
-{
-    const QString cmake = w64devkitTool(QStringLiteral("cmake"));
-
-    return {
-        haxe,
-        {cmake, QStringLiteral("-S"), QStringLiteral("."), QStringLiteral("-B"), buildTree, QStringLiteral("-G"),
-         QStringLiteral("Ninja"), QStringLiteral("-DCMAKE_MAKE_PROGRAM=%1").arg(w64devkitTool(QStringLiteral("ninja"))),
-         QStringLiteral("-DCMAKE_C_COMPILER=%1").arg(w64devkitTool(QStringLiteral("gcc"))),
-         QStringLiteral("-DCMAKE_CXX_COMPILER=%1").arg(w64devkitTool(QStringLiteral("g++"))),
-         QStringLiteral("-DCMAKE_BUILD_TYPE=%1").arg(buildType)},
-        {cmake, QStringLiteral("--build"), buildTree, QStringLiteral("--parallel")},
-    };
-}
-
 QProcessEnvironment WindowsToolchain::w64devkitEnvironment()
 {
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();

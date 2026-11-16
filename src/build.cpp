@@ -3,203 +3,36 @@
 #include "emscripten_sdk.h"
 #include "windows_toolchain.h"
 
-#include <QDir>
-#include <QFileInfo>
-#include <QStandardPaths>
-
 namespace
 {
-    struct ConsoleToolchain
+    // What this machine has to build with. Visual Studio is the one thing FriedCore does not look for, since asking runs a program.
+    fried::core::Toolchains toolchains()
     {
-        const char *variable;
-        QString relativePath;
-        QString console;
-    };
-
-    ConsoleToolchain toolchainOf(Platform platform)
-    {
-        if (platform == Platform::Vita)
-        {
-            return {"VITASDK", QStringLiteral("share/vita.toolchain.cmake"), QStringLiteral("Vita")};
-        }
-
-        if (platform == Platform::Switch)
-        {
-            return {"DEVKITPRO", QStringLiteral("cmake/Switch.cmake"), QStringLiteral("Switch")};
-        }
-
-        if (platform == Platform::NintendoDs)
-        {
-            return {"DEVKITPRO", QStringLiteral("cmake/NDS.cmake"), QStringLiteral("DS")};
-        }
-
-        return {"DEVKITPRO", QStringLiteral("cmake/3DS.cmake"), QStringLiteral("3DS")};
+        fried::core::Toolchains found = fried::core::detectToolchains(
+            {fromQt(EmscriptenSdk::managedDirectory()), fromQt(WindowsToolchain::w64devkitDirectory())});
+        found.m_visualStudioCmake = fromQt(WindowsToolchain::visualStudioCmake());
+        return found;
     }
 
-    // Empty when the SDK is not installed or not where its variable points. Both
-    // SDKs export that variable from a shell profile, so a manager started from a
-    // desktop menu may never have inherited it.
-    QString consoleToolchainFile(Platform platform, QString *error)
+    QStringList argumentsOf(const fried::core::BuildStep &step)
     {
-        const ConsoleToolchain toolchain = toolchainOf(platform);
-
-        const QString sdk = qEnvironmentVariable(toolchain.variable);
-        if (sdk.isEmpty())
+        QStringList arguments;
+        for (const std::string &argument : step.m_arguments)
         {
-            *error = QStringLiteral("%1 is not set, so there is no %2 toolchain to build with.")
-                         .arg(QString::fromLatin1(toolchain.variable), toolchain.console);
-            return {};
+            arguments << toQt(argument);
         }
-
-        const QString file = QDir(sdk).filePath(toolchain.relativePath);
-        if (!QFileInfo::exists(file))
-        {
-            *error = QStringLiteral("%1 points at %2, where there is no %3.")
-                         .arg(QString::fromLatin1(toolchain.variable), QDir::toNativeSeparators(sdk),
-                              toolchain.relativePath);
-            return {};
-        }
-
-        return file;
+        return arguments;
     }
-
-    // The fxSDK exports no variable of its own. It installs the fxsdk command into
-    // <prefix>/bin and its CMake files under <prefix>/lib, so the command on the
-    // PATH is what leads to the toolchain.
-    QString fxsdkToolchainFile(QString *error)
-    {
-        const QString fxsdk = QStandardPaths::findExecutable(QStringLiteral("fxsdk"));
-        if (fxsdk.isEmpty())
-        {
-            *error = QStringLiteral("fxsdk is not on the PATH, so there is no fx-CG50 toolchain to build with.");
-            return {};
-        }
-
-        const QString file =
-            QDir::cleanPath(QFileInfo(fxsdk).absoluteDir().filePath(QStringLiteral("../lib/cmake/fxsdk/FXCG50.cmake")));
-        if (!QFileInfo::exists(file))
-        {
-            *error = QStringLiteral("%1 has no fx-CG50 toolchain at %2.")
-                         .arg(QDir::toNativeSeparators(fxsdk), QDir::toNativeSeparators(file));
-            return {};
-        }
-
-        return file;
-    }
-
-    QString emscriptenToolchainFile(QString *error)
-    {
-        const QString sdk = EmscriptenSdk::directory();
-        if (sdk.isEmpty())
-        {
-            *error = QStringLiteral("There is no Emscripten SDK, so there is nothing to build for the web with.");
-            return {};
-        }
-
-        return EmscriptenSdk::toolchainFile(sdk);
-    }
-
-    // A game holds the engine as its engine/ submodule, while the engine's own
-    // sandbox sits inside the engine. Empty when neither is there.
-    QString engineDirectoryOf(const QString &projectDirectory)
-    {
-        const QDir project(projectDirectory);
-        for (const QString &candidate : {project.filePath(QStringLiteral("engine")), project.filePath(QStringLiteral(".."))})
-        {
-            if (QFileInfo::exists(QDir(candidate).filePath(QStringLiteral("cmake/FriedEngine.cmake"))))
-            {
-                return QDir::cleanPath(candidate);
-            }
-        }
-
-        return {};
-    }
-
-    // The engine ships this toolchain itself, so only the cross compiler has to be installed.
-    QString mingwToolchainFile(const QString &projectDirectory, QString *error)
-    {
-        if (QStandardPaths::findExecutable(QStringLiteral("x86_64-w64-mingw32-g++")).isEmpty())
-        {
-            *error = QStringLiteral("x86_64-w64-mingw32-g++ is not on the PATH, so there is no MinGW-w64 compiler to "
-                                    "build for Windows with.");
-            return {};
-        }
-
-        const QString engine = engineDirectoryOf(projectDirectory);
-        if (engine.isEmpty())
-        {
-            *error = QStringLiteral("There is no Fried Engine in the project's engine/ submodule, so there is no "
-                                    "MinGW-w64 toolchain to build for Windows with.");
-            return {};
-        }
-
-        const QString file = QDir(engine).filePath(QStringLiteral("cmake/toolchains/mingw-w64.cmake"));
-        if (!QFileInfo::exists(file))
-        {
-            *error = QStringLiteral("The project's engine has no MinGW-w64 toolchain at %1. Updating the engine "
-                                    "submodule brings it.")
-                         .arg(QDir::toNativeSeparators(file));
-            return {};
-        }
-
-        return file;
-    }
-
-    QList<QStringList> pipeline(const QString &buildTree, Build::Type type, bool logToFile,
-                                const QStringList &configureExtras,
-                                const QString &cmake = QStringLiteral("cmake"))
-    {
-        const QString typeName = Build::name(type);
-
-        QStringList configure = {cmake, QStringLiteral("-S"), QStringLiteral("."),
-                                 QStringLiteral("-B"), buildTree,
-                                 QStringLiteral("-DCMAKE_BUILD_TYPE=%1").arg(typeName)};
-        configure += configureExtras;
-
-        return {
-            Build::haxeCommand(type, logToFile),
-            configure,
-            // A generator that holds every configuration at once ignores the variable and reads --config
-            {cmake, QStringLiteral("--build"), buildTree, QStringLiteral("--config"), typeName,
-             QStringLiteral("--parallel")},
-        };
-    }
-
-#ifdef Q_OS_WIN
-    QList<QStringList> windowsPipeline(const QString &buildTree, Build::Type type, bool logToFile, QString *error)
-    {
-        const QString visualStudioCmake = WindowsToolchain::visualStudioCmake();
-        if (!visualStudioCmake.isEmpty())
-        {
-            return pipeline(buildTree, type, logToFile, {}, visualStudioCmake);
-        }
-
-        if (WindowsToolchain::w64devkitInstalled())
-        {
-            return WindowsToolchain::w64devkitPipeline(Build::haxeCommand(type, logToFile), buildTree, Build::name(type));
-        }
-
-        *error = QStringLiteral("There is no C++ compiler to build with: Visual Studio's C++ tools are not "
-                                "installed, and neither is w64devkit.");
-        return {};
-    }
-#endif
 }
 
 bool Build::needsEmscriptenDownload(BuildTarget target)
 {
-    return target == BuildTarget::Web && EmscriptenSdk::directory().isEmpty();
+    return fried::core::Build::needsEmscriptenDownload(target, toolchains());
 }
 
 bool Build::needsCompilerDownload(BuildTarget target)
 {
-#ifdef Q_OS_WIN
-    return target == BuildTarget::Pc && WindowsToolchain::visualStudioCmake().isEmpty()
-           && !WindowsToolchain::w64devkitInstalled();
-#else
-    Q_UNUSED(target);
-    return false;
-#endif
+    return fried::core::Build::needsCompilerDownload(target, toolchains());
 }
 
 QProcessEnvironment Build::environment(BuildTarget target)
@@ -217,74 +50,41 @@ QProcessEnvironment Build::environment(BuildTarget target)
 
 QString Build::defaultDirectory(BuildTarget target)
 {
-    if (target == BuildTarget::Pc)
-    {
-        return QStringLiteral("build");
-    }
-
-    return QStringLiteral("build/%1").arg(toQt(buildTargetKey(target)));
+    return toQt(fried::core::Build::defaultDirectory(target));
 }
 
 QString Build::name(Type type)
 {
-    return type == Type::Release ? QStringLiteral("Release") : QStringLiteral("Debug");
+    return toQt(fried::core::buildTypeName(type));
 }
 
 Build::Type Build::typeNamed(const QString &name)
 {
-    return name == Build::name(Type::Release) ? Type::Release : Type::Debug;
+    return fried::core::buildTypeNamed(fromQt(name));
 }
 
 QStringList Build::haxeCommand(Type type, bool logToFile)
 {
-    QStringList command = {QStringLiteral("haxe"), QStringLiteral("build.hxml")};
-    if (type == Type::Debug)
-    {
-        command << QStringLiteral("-debug");
-    }
-    if (logToFile)
-    {
-        command << QStringLiteral("-D") << QStringLiteral("fried_log_file");
-    }
-    return command;
+    return argumentsOf(fried::core::Build::haxeStep(type, logToFile));
 }
 
 QList<QStringList> Build::commands(BuildTarget target, Type type, bool logToFile,
                                    const QString &projectDirectory, const QString &buildDirectory,
                                    QString *error)
 {
-    if (buildDirectory.isEmpty())
+    std::string reason;
+    const std::vector<fried::core::BuildStep> steps = fried::core::Build::steps(
+        target, type, logToFile, fromQt(projectDirectory), fromQt(buildDirectory), toolchains(), &reason);
+    if (steps.empty())
     {
-        *error = QStringLiteral("There is no build directory to build in.");
+        *error = toQt(reason);
         return {};
     }
 
-    QString toolchain;
-    switch (target)
+    QList<QStringList> commands;
+    for (const fried::core::BuildStep &step : steps)
     {
-    case BuildTarget::Pc:
-#ifdef Q_OS_WIN
-        return windowsPipeline(buildDirectory, type, logToFile, error);
-#else
-        return pipeline(buildDirectory, type, logToFile, {});
-#endif
-    case BuildTarget::WindowsFromHost:
-        toolchain = mingwToolchainFile(projectDirectory, error);
-        break;
-    case BuildTarget::Cg50:
-        toolchain = fxsdkToolchainFile(error);
-        break;
-    case BuildTarget::Web:
-        toolchain = emscriptenToolchainFile(error);
-        break;
-    default:
-        toolchain = consoleToolchainFile(platformOf(target), error);
+        commands << argumentsOf(step);
     }
-    if (toolchain.isEmpty())
-    {
-        return {};
-    }
-
-    return pipeline(buildDirectory, type, logToFile,
-                    {QStringLiteral("-DCMAKE_TOOLCHAIN_FILE=%1").arg(toolchain)});
+    return commands;
 }

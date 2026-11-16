@@ -2,19 +2,18 @@
 
 #include "build_target.h"
 
+#include <fried/core/build.h>
+
 #include <QList>
 #include <QProcessEnvironment>
 #include <QString>
 #include <QStringList>
 
+// What a build runs is FriedCore's. This is the tool's side of it: what the machine has, which only the tool knows on Windows, and Qt's types.
 class Build
 {
 public:
-    enum class Type
-    {
-        Debug,
-        Release
-    };
+    using Type = fried::core::BuildType;
 
     static QString defaultDirectory(BuildTarget target);
 

@@ -6,7 +6,7 @@ This document describes the decisions behind what is currently implemented, and 
 
 What a project file means is also what Fried Editor needs to know, so it is written once, in [FriedCore](https://github.com/KoyFC/FriedCore), a library with no Qt in it that both tools take as a submodule. The tool's own sources are its windows and what only it does. Text crosses between the two through `core_bridge.h`, as FriedCore's is UTF-8 in a `std::string`.
 
-So far the platforms, the build targets and the project file come from it.
+So far the platforms, the build targets, the project file and the commands of a build come from it.
 
 ## Project layout as the contract
 
@@ -29,6 +29,8 @@ Emptying a field removes its key rather than storing an empty string, and that c
 ## Platforms
 
 What the build bar lists is a `BuildTarget`, a build directory, a toolchain file and nothing else. Targets and platforms are separate because Windows from Linux is one more thing to build but not one more platform: its game is the PC one, with the PC's display and icon, so `platformOf()` maps it to `Platform::Pc` and the project pages never see it. It is listed only off Windows, where building for Windows is what `PC` already does. The web is a platform to the engine, with a section of its own in `project.fried`, but the tool has no page for it: `pageOf()` puts its target on the PC's page, beside Windows. The tool never tells the engine's CMake which platform it is building for: the toolchain file does that by setting `VITA`, `NINTENDO_SWITCH`, `NINTENDO_3DS` or `NINTENDO_DS`, by naming its platform in `FXSDK_PLATFORM_LONG` for the fx-CG50, or, for Windows, by setting `CMAKE_SYSTEM_NAME`, so the pipeline is the same three commands everywhere and adding a target here is a case in two functions rather than a new code path.
+
+The commands a target runs, and the lookup of the SDKs below, are FriedCore's `Build::steps` and `detectToolchains`: `build.cpp` only hands them the folders the tool downloads into and, on Windows, the Visual Studio that `vswhere` finds, which is the one thing FriedCore cannot ask for. The command window keeps `QProcess`, which is proven on Windows, and takes what kind of line each is from FriedCore's `kindOf`.
 
 Each SDK is found through its own environment variable (`VITASDK`, `DEVKITPRO`, and `EMSDK` for the web, with `~/emsdk` and then the tool's own copy as fallbacks, whose toolchain file is under `upstream/emscripten/` there) and checked for the toolchain file before anything runs, so a missing SDK is one dialog rather than a build that dies halfway. Both variables are normally exported from a shell profile, which a tool launched from a desktop menu may never have inherited. The fxSDK exports no variable, so its toolchain is found from the `fxsdk` command on the `PATH`, which it installs in the `bin/` beside the `lib/cmake/fxsdk/` holding the toolchain file. The MinGW-w64 toolchain file belongs to the engine rather than to an SDK, so it is taken from the project's `engine/` submodule, or from the directory above for the engine's own sandbox, which sits inside the engine, and the cross compiler it names is checked on the `PATH` first.
 

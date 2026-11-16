@@ -1,5 +1,9 @@
 #include "command_dialog.h"
 
+#include "core_bridge.h"
+
+#include <fried/core/line_kind.h>
+
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFileInfo>
@@ -197,35 +201,19 @@ QTextCharFormat CommandDialog::formatFor(Line kind, const QPalette &palette)
     return format;
 }
 
-// Every pattern here is something one of the three tools in the pipeline prints:
-// gcc and clang diagnostics, CMake's own messages and progress, and haxe, whose
-// errors carry no word for what they are and have to be recognized by shape.
 CommandDialog::Line CommandDialog::kindOf(const QString &line)
 {
-    static const QRegularExpression haxeDiagnostic(QStringLiteral(R"(^\S+\.hx:\d+: )"));
-
-    if (line.contains(QStringLiteral("error:"), Qt::CaseInsensitive)
-        || line.contains(QStringLiteral("CMake Error"))
-        || line.contains(QStringLiteral("undefined reference to"))
-        || haxeDiagnostic.match(line).hasMatch())
+    switch (fried::core::kindOf(fromQt(line)))
     {
+    case fried::core::LineKind::Error:
         return Line::Error;
-    }
-
-    if (line.contains(QStringLiteral("warning:"), Qt::CaseInsensitive)
-        || line.contains(QStringLiteral("CMake Warning"))
-        || line.startsWith(QStringLiteral("Warning :")))
-    {
+    case fried::core::LineKind::Warning:
         return Line::Warning;
-    }
-
-    // make's percentage, and CMake's own status lines.
-    if (line.startsWith(QStringLiteral("[")) || line.startsWith(QStringLiteral("-- ")))
-    {
+    case fried::core::LineKind::Progress:
         return Line::Progress;
+    default:
+        return Line::Plain;
     }
-
-    return Line::Plain;
 }
 
 void CommandDialog::append(const QString &text, Line kind)

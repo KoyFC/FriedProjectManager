@@ -20,9 +20,6 @@ namespace WindowsToolchain
     QList<QStringList> beginInstall();
     bool finishInstall(bool unpacked, QString *error);
 
-    // Absolute paths, since the tool's own PATH never has w64devkit on it.
-    QList<QStringList> w64devkitPipeline(const QStringList &haxe, const QString &buildTree, const QString &buildType);
-
     // For whatever the build runs that looks its tools up on the PATH.
     QProcessEnvironment w64devkitEnvironment();
 }
