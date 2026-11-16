@@ -5,7 +5,7 @@
 #include <QList>
 #include <QString>
 
-// A way a project's asset does not suit a platform. The same limits as the Fried Editor's Issues tab, which this reports and does not fix.
+// A way a project's asset does not suit a platform, from FriedCore, whose fixes the Fried Editor's Issues tab offers and this only reports.
 struct AssetIssue
 {
     bool isError = false;
