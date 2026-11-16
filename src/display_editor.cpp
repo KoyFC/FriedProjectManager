@@ -91,20 +91,22 @@ DisplayEditor::DisplayEditor(QWidget *parent)
 DisplaySettings DisplayEditor::display() const
 {
     return {
-        m_mode->currentData().toString(),
+        fromQt(m_mode->currentData().toString()),
         m_width->value(),
         m_height->value(),
-        m_filter->currentData().toString(),
+        fromQt(m_filter->currentData().toString()),
     };
 }
 
 void DisplayEditor::setDisplay(const DisplaySettings &display)
 {
     m_isShowing = true;
-    m_mode->setCurrentIndex(std::max(0, m_mode->findData(display.m_mode)));
-    m_width->setValue(display.m_width);
-    m_height->setValue(display.m_height);
-    m_filter->setCurrentIndex(std::max(0, m_filter->findData(display.m_filter)));
+    // A project in the native mode has no size, so the boxes hold the one a tool suggests for when it leaves that mode.
+    const fried::core::DisplaySettings &suggested = fried::core::s_suggestedDisplay;
+    m_mode->setCurrentIndex(std::max(0, m_mode->findData(toQt(display.m_mode))));
+    m_width->setValue(display.m_width > 0 ? display.m_width : suggested.m_width);
+    m_height->setValue(display.m_height > 0 ? display.m_height : suggested.m_height);
+    m_filter->setCurrentIndex(std::max(0, m_filter->findData(toQt(display.m_filter))));
     m_isShowing = false;
 
     showModeDetails();

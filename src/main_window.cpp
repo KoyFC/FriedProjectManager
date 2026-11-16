@@ -713,7 +713,7 @@ void MainWindow::changePlatformIcon(Platform platform)
     QMessageBox::information(this, s_applicationTitle, (Icon::describe(rendered) + QChar(' ') + notes.join(QChar(' '))).trimmed());
 }
 
-// The limits are what the package holds: an SMDH's description is 128 characters, and a DS banner line is kept to 31.
+// The limits are what the package holds, and FriedCore's.
 QWidget *MainWindow::buildPackagingText(Platform platform, QWidget *parent)
 {
     struct Line
@@ -729,16 +729,18 @@ QWidget *MainWindow::buildPackagingText(Platform platform, QWidget *parent)
     if (platform == Platform::Nintendo3ds)
     {
         section = QStringLiteral("3ds");
-        lines = {{QStringLiteral("description"), QStringLiteral("Description"), 128,
-                  QStringLiteral("Empty shows the version. At most 128 characters.")}};
+        const int limit = fried::core::Project::s_3dsDescriptionLimit;
+        lines = {{QStringLiteral("description"), QStringLiteral("Description"), limit,
+                  QStringLiteral("Empty shows the version. At most %1 characters.").arg(limit)}};
     }
     else if (platform == Platform::NintendoDs)
     {
         section = QStringLiteral("nds");
-        lines = {{QStringLiteral("subtitle1"), QStringLiteral("Second line"), 31,
-                  QStringLiteral("Empty shows the organization. At most 31 characters.")},
-                 {QStringLiteral("subtitle2"), QStringLiteral("Third line"), 31,
-                  QStringLiteral("Empty shows the version. At most 31 characters.")}};
+        const int limit = fried::core::Project::s_ndsSubtitleLimit;
+        lines = {{QStringLiteral("subtitle1"), QStringLiteral("Second line"), limit,
+                  QStringLiteral("Empty shows the organization. At most %1 characters.").arg(limit)},
+                 {QStringLiteral("subtitle2"), QStringLiteral("Third line"), limit,
+                  QStringLiteral("Empty shows the version. At most %1 characters.").arg(limit)}};
     }
     else
     {

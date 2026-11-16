@@ -6,7 +6,7 @@ This document describes the decisions behind what is currently implemented, and 
 
 What a project file means is also what Fried Editor needs to know, so it is written once, in [FriedCore](https://github.com/KoyFC/FriedCore), a library with no Qt in it that both tools take as a submodule. The tool's own sources are its windows and what only it does. Text crosses between the two through `core_bridge.h`, as FriedCore's is UTF-8 in a `std::string`.
 
-So far the platforms and the build targets come from it.
+So far the platforms, the build targets and the project file come from it.
 
 ## Project layout as the contract
 
@@ -18,7 +18,7 @@ A new project is left staged but not committed, because the first commit of some
 
 ## project.fried
 
-The tool reads and rewrites a file the engine also reads, so it keeps the parsed document whole and writes back only the fields it owns. Unknown keys survive a save, which is what lets the engine add one without the tool learning about it first.
+The tool reads and rewrites a file the engine also reads, through FriedCore's `Project`, which keeps the parsed document whole and writes back only the fields the tool owns. Unknown keys survive a save, which is what lets the engine add one without the tool learning about it first. A project with no `display` has the native mode, as the engine reads it, so the Display page shows that and keeps the size it suggests (640x360) greyed out until a mode that uses it is chosen.
 
 Emptying a field removes its key rather than storing an empty string, and that cascades: clearing `vita.titleId` removes the `vita` object with it, since the engine reads an absent key as undeclared.
 

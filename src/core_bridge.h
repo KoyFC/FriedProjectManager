@@ -9,3 +9,8 @@ inline QString toQt(const std::string &text)
 {
     return QString::fromStdString(text);
 }
+
+inline std::string fromQt(const QString &text)
+{
+    return text.toStdString();
+}

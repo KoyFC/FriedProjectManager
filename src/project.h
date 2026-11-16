@@ -1,24 +1,15 @@
 #pragma once
 
+#include "core_bridge.h"
 #include "platform.h"
 
-#include <QJsonObject>
+#include <fried/core/project.h>
+
 #include <QString>
 
-#include <optional>
+using fried::core::DisplaySettings;
 
-// The size is only a suggestion until a mode that uses it is picked.
-struct DisplaySettings
-{
-    QString m_mode = QStringLiteral("expand");
-    int m_width = 640;
-    int m_height = 360;
-    QString m_filter = QStringLiteral("nearest");
-
-    bool operator==(const DisplaySettings &other) const;
-    bool operator!=(const DisplaySettings &other) const;
-};
-
+// project.fried as the tool edits it. What the file means is FriedCore's; this takes and gives Qt's strings.
 class Project
 {
 public:
@@ -56,8 +47,5 @@ public:
     void dropPlatformDisplays();
 
 private:
-    QString m_directory;
-
-    // Kept whole so unknown keys survive a save.
-    QJsonObject m_root;
+    fried::core::Project m_core;
 };
