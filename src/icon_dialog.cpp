@@ -1,5 +1,7 @@
 #include "icon_dialog.h"
 
+#include "core_bridge.h"
+
 #include "icon.h"
 #include "image_conversion.h"
 #include "last_location.h"
@@ -213,10 +215,10 @@ void IconDialog::render(Platform platform, const QImage &source)
 void IconDialog::showRendered(Platform platform, const QStringList &notes)
 {
     PlatformIcon &icon = iconFor(platform);
-    icon.preview->setPixmap(previewOf(icon.rendered));
+    icon.preview->setPixmap(previewOf(toQt(icon.rendered.m_preview)));
 
     QStringList sentences;
-    sentences << QStringLiteral("%1x%1.").arg(icon.rendered.width());
+    sentences << QStringLiteral("%1x%2.").arg(icon.rendered.m_preview.m_width).arg(icon.rendered.m_preview.m_height);
     sentences << notes;
     icon.notes->setText(sentences.join(QChar(' ')));
 }
@@ -225,7 +227,7 @@ void IconDialog::showOnDisk(Platform platform)
 {
     PlatformIcon &icon = iconFor(platform);
     icon.source = QImage();
-    icon.rendered = QImage();
+    icon.rendered = fried::core::RenderedIcon();
     icon.chosen = false;
 
     const QString path = QDir(m_directory).filePath(Icon::path(platform));
@@ -283,10 +285,10 @@ void IconDialog::sameImageToggled(bool same)
 
 void IconDialog::write()
 {
-    QMap<Platform, QImage> rendered;
+    QList<fried::core::RenderedIcon> rendered;
     for (auto icon = m_icons.constBegin(); icon != m_icons.constEnd(); ++icon)
     {
-        rendered.insert(icon.key(), icon.value().rendered);
+        rendered.append(icon.value().rendered);
     }
 
     QString error;

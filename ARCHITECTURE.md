@@ -6,7 +6,7 @@ This document describes the decisions behind what is currently implemented, and 
 
 What a project file means is also what Fried Editor needs to know, so it is written once, in [FriedCore](https://github.com/KoyFC/FriedCore), a library with no Qt in it that both tools take as a submodule. The tool's own sources are its windows and what only it does. Text crosses between the two through `core_bridge.h`, as FriedCore's is UTF-8 in a `std::string`.
 
-So far the platforms, the build targets, the project file and the commands of a build come from it.
+So far the platforms, the build targets, the project file, the commands of a build and the icons come from it.
 
 ## Project layout as the contract
 
@@ -52,9 +52,7 @@ The download runs in the command window like any build, as three commands: `curl
 
 A project keeps one icon per platform because no single file can serve them all: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, a `.nro` carries a 256x256 JPEG, a `.3dsx` a 48x48 icon with no transparency, a `.nds` a 32x32 one of 16 colors, and a `.g3a` two 92x64 ones, its menu icon unselected and selected. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.
 
-Each conversion reports what it had to do to the source, because silently cropping or flattening someone's artwork is worse than saying so. A source with transparency is composited onto black for the Switch and the 3DS rather than converted, so the result does not depend on whatever color sat under the transparent pixels, and onto white for the fx-CG50, whose menu is white. The fx-CG50's pair is one image in a 5-pixel frame, white unselected and blue selected, the way the fxSDK's own template draws its pair, so one source image still makes both and the menu still shows which add-in is chosen. The DS icon's first color is transparent, so a pixel less than half opaque takes it and the rest are cut to the other 15 by median cut, here rather than by `ndstool`, which takes a BMP of more colors without a warning and garbles it.
-
-Every file is staged before any of them is committed, so a failure on the third icon leaves the first two as they were. The cropping, resizing, palette reduction and staged writing live in `ImageConversion`, shared with the LiveArea images.
+Each conversion reports what it had to do to the source, because silently cropping or flattening someone's artwork is worse than saying so. How each platform's file is made, from the flattening to the median cut and the staged writing, is FriedCore's `Icon`, which the Fried Editor uses as well, so the two tools write the same bytes. The tool's part is reading the source image, since Qt reads more formats than FriedCore's decoders and `ImageConversion::read` is also what the LiveArea images use, and drawing the previews from what `Icon::render` gives back. `ImageConversion` stays for the LiveArea images and the boot screen.
 
 ## LiveArea images
 

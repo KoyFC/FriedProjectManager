@@ -702,7 +702,7 @@ void MainWindow::changePlatformIcon(Platform platform)
     }
 
     QStringList notes;
-    const QMap<Platform, QImage> rendered = {{platform, Icon::render(platform, source, &notes)}};
+    const QList<fried::core::RenderedIcon> rendered = {Icon::render(platform, source, &notes)};
     if (!Icon::write(m_project.directory(), rendered, &error))
     {
         QMessageBox::warning(this, s_applicationTitle, error);

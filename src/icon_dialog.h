@@ -1,5 +1,6 @@
 #pragma once
 
+#include "icon.h"
 #include "platform.h"
 
 #include <QDialog>
@@ -28,7 +29,7 @@ private:
         QLabel *notes = nullptr;
         QPushButton *choose = nullptr;
         QImage source;
-        QImage rendered;
+        fried::core::RenderedIcon rendered;
         bool chosen = false;
     };
 
