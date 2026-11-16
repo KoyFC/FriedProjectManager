@@ -166,7 +166,7 @@ QWidget *MainWindow::buildProjectView()
     QListWidget *platforms = newSectionList(panel);
     for (const Platform platform : s_platforms)
     {
-        addSection(platforms, platformName(platform), buildPlatformPage(platform));
+        addSection(platforms, toQt(platformLabel(platform)), buildPlatformPage(platform));
         platforms->item(platforms->count() - 1)->setData(s_platformRole, static_cast<int>(platform));
     }
 
@@ -430,7 +430,7 @@ QWidget *MainWindow::buildIconsPage()
         QLabel *path = helpLabel(Icon::path(platform), parent);
 
         grid->setColumnMinimumWidth(column, s_iconColumnWidth);
-        grid->addWidget(new QLabel(platformName(platform), parent), 0, column);
+        grid->addWidget(new QLabel(toQt(platformLabel(platform)), parent), 0, column);
         grid->addWidget(preview, 1, column);
         grid->addWidget(path, 2, column);
     }
@@ -479,7 +479,7 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
     }
 
     QVBoxLayout *content = nullptr;
-    QWidget *page = newPage(platformName(platform), description, &content);
+    QWidget *page = newPage(toQt(platformLabel(platform)), description, &content);
     QWidget *parent = content->parentWidget();
 
     content->addWidget(helpLabel(QStringLiteral("Choosing this platform makes it the target of the build bar below, which remembers its build type, directory and log for this project."), parent));
@@ -1094,7 +1094,7 @@ void MainWindow::buildProject()
         return;
     }
 
-    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(buildTargetName(target), Build::name(type)),
+    CommandDialog build(this, QStringLiteral("Build %1 (%2)").arg(toQt(buildTargetName(target)), Build::name(type)),
                         m_project.directory(), commands);
     build.setEnvironment(Build::environment(target));
     build.setActivity(QStringLiteral("Compiling"));
@@ -1102,8 +1102,8 @@ void MainWindow::buildProject()
     build.exec();
 
     statusBar()->showMessage(build.succeeded()
-                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), buildTargetName(target))
-                                 : QStringLiteral("Build for %1 did not finish").arg(buildTargetName(target)));
+                                 ? QStringLiteral("Built %1 for %2").arg(m_project.name(), toQt(buildTargetName(target)))
+                                 : QStringLiteral("Build for %1 did not finish").arg(toQt(buildTargetName(target))));
 }
 
 void MainWindow::showEngineVersion()

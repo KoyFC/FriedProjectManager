@@ -222,7 +222,7 @@ QString Build::defaultDirectory(BuildTarget target)
         return QStringLiteral("build");
     }
 
-    return QStringLiteral("build/%1").arg(buildTargetKey(target));
+    return QStringLiteral("build/%1").arg(toQt(buildTargetKey(target)));
 }
 
 QString Build::name(Type type)

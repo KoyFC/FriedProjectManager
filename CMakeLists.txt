@@ -8,6 +8,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build configuration" FORCE)
 endif()
 
+# What the tool shares with the Fried Editor. Added before Qt is set up, so AUTOMOC does not run over it.
+add_subdirectory(third_party/fried_core)
+
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 # Turns on AUTOMOC, which Q_OBJECT needs, and sets the C++ standard.
@@ -25,6 +28,7 @@ qt_add_executable(fried_project_manager
     src/build_bar.cpp
     src/command_dialog.h
     src/command_dialog.cpp
+    src/core_bridge.h
     src/display_editor.h
     src/display_editor.cpp
     src/engine_version.h
@@ -113,4 +117,4 @@ qt_add_resources(fried_project_manager "templates"
         templates/project/switch/icon.jpg
 )
 
-target_link_libraries(fried_project_manager PRIVATE Qt6::Widgets)
+target_link_libraries(fried_project_manager PRIVATE Qt6::Widgets fried_core)

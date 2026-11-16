@@ -287,11 +287,11 @@ void Project::dropPlatformDisplays()
     for (int index = 0; index < s_platformCount; ++index)
     {
         const Platform platform = static_cast<Platform>(index);
-        QJsonObject section = m_root.value(platformKey(platform)).toObject();
+        QJsonObject section = m_root.value(toQt(platformKey(platform))).toObject();
         if (section.contains(s_displayKey))
         {
             section.remove(s_displayKey);
-            assign(m_root, platformKey(platform), section);
+            assign(m_root, toQt(platformKey(platform)), section);
         }
     }
 }

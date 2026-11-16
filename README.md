@@ -4,7 +4,7 @@ A desktop application that creates [Fried Engine](https://github.com/KoyFC/Fried
 
 The engine lives in its own repository and is consumed by each game as a pinned Git submodule. This repository holds only the tool. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the decisions behind it.
 
-Written in C++ with [Qt 6](https://www.qt.io/) and [CMake](https://cmake.org/).
+Written in C++ with [Qt 6](https://www.qt.io/) and [CMake](https://cmake.org/), on top of [FriedCore](https://github.com/KoyFC/FriedCore).
 
 ## Requirements
 
@@ -13,6 +13,8 @@ Written in C++ with [Qt 6](https://www.qt.io/) and [CMake](https://cmake.org/).
 - Qt 6.3+ with Qt Widgets, and its CMake package config available to `find_package(Qt6 ... )` (e.g. the distro's `qt6-qtbase-devel` package)
 
 ## Building
+
+[FriedCore](https://github.com/KoyFC/FriedCore), the library the tool shares with Fried Editor, is a submodule in `third_party/fried_core`, so clone with `--recurse-submodules`, or run `git submodule update --init` in a clone made without it.
 
 ```sh
 cmake -S . -B build

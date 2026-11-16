@@ -1,67 +1,10 @@
 #pragma once
 
-#include <QString>
-#include <QtGlobal>
+#include "core_bridge.h"
 
-enum class Platform
-{
-    Pc,
-    Vita,
-    Switch,
-    Nintendo3ds,
-    NintendoDs,
-    Cg50
-};
+#include <fried/core/platform.h>
 
+using fried::core::Platform;
+
+// The platforms with a page of their own, which are the first of FriedCore's. The web comes after them and is built from the PC's page.
 constexpr int s_platformCount = 6;
-
-// The same name the engine gives each platform's section of project.fried.
-inline QString platformKey(Platform platform)
-{
-    switch (platform)
-    {
-    case Platform::Vita:
-        return QStringLiteral("vita");
-    case Platform::Switch:
-        return QStringLiteral("switch");
-    case Platform::Nintendo3ds:
-        return QStringLiteral("3ds");
-    case Platform::NintendoDs:
-        return QStringLiteral("nds");
-    case Platform::Cg50:
-        return QStringLiteral("cg50");
-    default:
-        return QStringLiteral("pc");
-    }
-}
-
-inline QString platformName(Platform platform)
-{
-    switch (platform)
-    {
-    case Platform::Vita:
-        return QStringLiteral("PlayStation Vita");
-    case Platform::Switch:
-        return QStringLiteral("Nintendo Switch");
-    case Platform::Nintendo3ds:
-        return QStringLiteral("Nintendo 3DS");
-    case Platform::NintendoDs:
-        return QStringLiteral("Nintendo DS");
-    case Platform::Cg50:
-        return QStringLiteral("Casio fx-CG50");
-    default:
-        return QStringLiteral("PC");
-    }
-}
-
-// The system running the tool, which is the one the PC target builds for.
-inline QString hostSystemName()
-{
-#if defined(Q_OS_WIN)
-    return QStringLiteral("Windows");
-#elif defined(Q_OS_MACOS)
-    return QStringLiteral("macOS");
-#else
-    return QStringLiteral("Linux");
-#endif
-}

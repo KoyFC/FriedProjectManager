@@ -30,7 +30,7 @@ namespace
     QString rememberedKey(const QString &setting, const QString &project, BuildTarget target)
     {
         return QStringLiteral("%1/%2/%3")
-            .arg(setting, buildTargetKey(target), QString::fromUtf8(QUrl::toPercentEncoding(project)));
+            .arg(setting, toQt(buildTargetKey(target)), QString::fromUtf8(QUrl::toPercentEncoding(project)));
     }
 
     QString directoryKey(const QString &project, BuildTarget target)
@@ -55,7 +55,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     m_target = new QComboBox(this);
     for (BuildTarget target : buildTargets())
     {
-        m_target->addItem(buildTargetName(target), static_cast<int>(target));
+        m_target->addItem(toQt(buildTargetName(target)), static_cast<int>(target));
     }
 
     m_type = new QComboBox(this);
@@ -119,14 +119,14 @@ BuildTarget BuildBar::target() const
 
 void BuildBar::selectPlatform(Platform platform)
 {
-    if (platformOf(target()) == platform)
+    if (pageOf(target()) == platform)
     {
         return;
     }
 
     for (int index = 0; index < m_target->count(); ++index)
     {
-        if (platformOf(static_cast<BuildTarget>(m_target->itemData(index).toInt())) == platform)
+        if (pageOf(static_cast<BuildTarget>(m_target->itemData(index).toInt())) == platform)
         {
             m_target->setCurrentIndex(index);
             return;

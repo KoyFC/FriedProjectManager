@@ -34,7 +34,7 @@ ToolchainPanel::ToolchainPanel(Platform platform, const BuildBar *buildBar, QWid
 
     for (const BuildTarget target : buildTargets())
     {
-        if (platformOf(target) != platform)
+        if (pageOf(target) != platform)
         {
             continue;
         }
@@ -97,13 +97,13 @@ void ToolchainPanel::refresh()
             text = QStringLiteral("Ready");
         }
 
-        row.status->setText(m_rows.size() > 1 ? QStringLiteral("%1: %2").arg(buildTargetName(row.target), text) : text);
+        row.status->setText(m_rows.size() > 1 ? QStringLiteral("%1: %2").arg(toQt(buildTargetName(row.target)), text) : text);
         row.download->setVisible(needsDownload);
     }
 
     // The commands are those of the target the build bar has on this platform, with the bar's own settings.
     const BuildTarget target = m_buildBar->target();
-    if (platformOf(target) != m_platform || m_projectDirectory.isEmpty())
+    if (pageOf(target) != m_platform || m_projectDirectory.isEmpty())
     {
         m_commandsCaption->setText(QStringLiteral("Choose this platform to see the commands its build runs."));
         m_commands->clear();
@@ -114,7 +114,7 @@ void ToolchainPanel::refresh()
     const QList<QStringList> commands = Build::commands(target, m_buildBar->type(), m_buildBar->logToFile(),
                                                         m_projectDirectory, m_buildBar->directory(), &error);
     m_commandsCaption->setText(QStringLiteral("Commands for %1 (%2), run in the project folder:")
-                                   .arg(buildTargetName(target), Build::name(m_buildBar->type())));
+                                   .arg(toQt(buildTargetName(target)), Build::name(m_buildBar->type())));
     if (commands.isEmpty())
     {
         m_commands->setPlainText(error);
