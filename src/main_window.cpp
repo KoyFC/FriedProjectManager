@@ -421,6 +421,31 @@ QWidget *MainWindow::buildDisplayPage()
         m_framerateChoice->setEnabled(!isOn);
         m_defaultTargetFramerate->setEnabled(!isOn);
     });
+
+    QHBoxLayout *physics = new QHBoxLayout();
+    physics->addWidget(new QLabel(QStringLiteral("Physics rate"), parent));
+    m_physicsRateChoice = new QComboBox(parent);
+    for (int choice : {20, 30, 60, 90, 120, 144, 240})
+    {
+        m_physicsRateChoice->addItem(QStringLiteral("%1 steps/s").arg(choice), choice);
+    }
+    m_physicsRateChoice->addItem(QStringLiteral("Custom"), -1);
+    m_physicsRate = new QSpinBox(parent);
+    m_physicsRate->setRange(1, 1000);
+    m_physicsRate->setSuffix(QStringLiteral(" steps/s"));
+    const QString physicsTip = QStringLiteral("How many fixed steps a second the game runs fixedUpdate and its kinematic bodies at, whatever the "
+                                              "frame rate. A game for a console that cannot afford 60 may ask for 30.");
+    m_physicsRateChoice->setToolTip(physicsTip);
+    m_physicsRate->setToolTip(physicsTip);
+    connect(m_physicsRateChoice, &QComboBox::currentIndexChanged, this, [this] {
+        m_physicsRate->setVisible(m_physicsRateChoice->currentData().toInt() < 0);
+        showUnsavedState();
+    });
+    connect(m_physicsRate, &QSpinBox::valueChanged, this, &MainWindow::showUnsavedState);
+    physics->addWidget(m_physicsRateChoice);
+    physics->addWidget(m_physicsRate);
+    physics->addStretch(1);
+    content->addLayout(physics);
     return page;
 }
 
@@ -856,6 +881,24 @@ void MainWindow::showFramerate(int framerate)
     m_defaultTargetFramerate->setVisible(m_framerateChoice->currentData().toInt() < 0);
 }
 
+int MainWindow::chosenPhysicsRate() const
+{
+    int choice = m_physicsRateChoice->currentData().toInt();
+    return choice < 0 ? m_physicsRate->value() : choice;
+}
+
+void MainWindow::showPhysicsRate(int rate)
+{
+    int index = m_physicsRateChoice->findData(rate);
+    if (index < 0)
+    {
+        m_physicsRate->setValue(rate);
+        index = m_physicsRateChoice->findData(-1);
+    }
+    m_physicsRateChoice->setCurrentIndex(index);
+    m_physicsRate->setVisible(m_physicsRateChoice->currentData().toInt() < 0);
+}
+
 void MainWindow::showDisplays()
 {
     m_sharedDisplayEditor->setDisplay(m_sharedDisplay);
@@ -995,6 +1038,7 @@ void MainWindow::showProject()
     showFramerate(m_project.defaultTargetFramerate());
     m_framerateChoice->setEnabled(!m_project.vsync());
     m_defaultTargetFramerate->setEnabled(!m_project.vsync());
+    showPhysicsRate(m_project.physicsRate());
     showDisplays();
 
     showIcons();
@@ -1029,6 +1073,7 @@ bool MainWindow::hasUnsavedEdits() const
            || hasUnsavedDisplay()
            || m_vsync->isChecked() != m_project.vsync()
            || chosenFramerate() != m_project.defaultTargetFramerate()
+           || chosenPhysicsRate() != m_project.physicsRate()
            || hasUnsavedFiles();
 }
 
@@ -1329,6 +1374,7 @@ bool MainWindow::saveProject()
     m_project.setDisplay(m_sharedDisplay);
     m_project.setVsync(m_vsync->isChecked());
     m_project.setDefaultTargetFramerate(chosenFramerate());
+    m_project.setPhysicsRate(chosenPhysicsRate());
     m_project.dropPlatformDisplays();
 
     QString error;

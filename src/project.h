@@ -37,6 +37,7 @@ public:
     DisplaySettings display() const;
     bool vsync() const;
     int defaultTargetFramerate() const;
+    int physicsRate() const;
 
     void setName(const QString &value);
     void setOrganization(const QString &value);
@@ -47,6 +48,7 @@ public:
     void setDisplay(const DisplaySettings &value);
     void setVsync(bool value);
     void setDefaultTargetFramerate(int value);
+    void setPhysicsRate(int value);
     // A display of a platform's own is no longer read by the engine, so saving takes any out.
     void dropPlatformDisplays();
 

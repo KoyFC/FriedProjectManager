@@ -93,6 +93,8 @@ private:
     void showDisplays();
     int chosenFramerate() const;
     void showFramerate(int framerate);
+    int chosenPhysicsRate() const;
+    void showPhysicsRate(int rate);
     void sharedDisplayEdited();
     bool hasUnsavedDisplay() const;
     bool hasUnsavedPackagingText() const;
@@ -132,6 +134,8 @@ private:
     QCheckBox *m_vsync = nullptr;
     QComboBox *m_framerateChoice = nullptr;
     QSpinBox *m_defaultTargetFramerate = nullptr;
+    QComboBox *m_physicsRateChoice = nullptr;
+    QSpinBox *m_physicsRate = nullptr;
     QList<ImageFileEditor *> m_imageEditors;
     LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;
 

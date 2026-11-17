@@ -132,6 +132,16 @@ void Project::setDefaultTargetFramerate(int value)
     m_core.setDefaultTargetFramerate(value);
 }
 
+int Project::physicsRate() const
+{
+    return m_core.physicsRate();
+}
+
+void Project::setPhysicsRate(int value)
+{
+    m_core.setPhysicsRate(value);
+}
+
 void Project::setVsync(bool value)
 {
     m_core.setVsync(value);
