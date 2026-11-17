@@ -18,6 +18,7 @@ class LiveAreaTemplateEditor;
 
 class QAction;
 class QCheckBox;
+class QComboBox;
 class QSpinBox;
 class QFormLayout;
 class QLabel;
@@ -90,6 +91,8 @@ private:
     QString nearbyLocation() const;
     void showProject();
     void showDisplays();
+    int chosenFramerate() const;
+    void showFramerate(int framerate);
     void sharedDisplayEdited();
     bool hasUnsavedDisplay() const;
     bool hasUnsavedPackagingText() const;
@@ -127,6 +130,7 @@ private:
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;
     QCheckBox *m_vsync = nullptr;
+    QComboBox *m_framerateChoice = nullptr;
     QSpinBox *m_defaultTargetFramerate = nullptr;
     QList<ImageFileEditor *> m_imageEditors;
     LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;

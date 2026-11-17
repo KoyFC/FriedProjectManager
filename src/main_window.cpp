@@ -27,6 +27,7 @@
 #include "windows_toolchain.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -390,19 +391,36 @@ QWidget *MainWindow::buildDisplayPage()
 
     QHBoxLayout *framerate = new QHBoxLayout();
     framerate->addWidget(new QLabel(QStringLiteral("Default target framerate"), parent));
+    m_framerateChoice = new QComboBox(parent);
+    for (int choice : {0, 30, 60, 75, 90, 120, 144, 165, 240})
+    {
+        m_framerateChoice->addItem(choice == 0 ? QStringLiteral("No limit") : QStringLiteral("%1 fps").arg(choice), choice);
+    }
+    m_framerateChoice->addItem(QStringLiteral("Custom"), -1);
     m_defaultTargetFramerate = new QSpinBox(parent);
-    m_defaultTargetFramerate->setRange(0, 1000);
-    m_defaultTargetFramerate->setSpecialValueText(QStringLiteral("No limit"));
-    m_defaultTargetFramerate->setToolTip(QStringLiteral("The frame rate the game starts at while vsync is off. The game can change it afterwards, "
-                                                        "for example from a settings menu."));
+    m_defaultTargetFramerate->setRange(1, 1000);
+    m_defaultTargetFramerate->setSuffix(QStringLiteral(" fps"));
+    const QString framerateTip = QStringLiteral("The frame rate the game starts at while vsync is off. The game can change it afterwards, "
+                                                "for example from a settings menu.");
+    m_framerateChoice->setToolTip(framerateTip);
+    m_defaultTargetFramerate->setToolTip(framerateTip);
+    connect(m_framerateChoice, &QComboBox::currentIndexChanged, this, [this] {
+        int choice = m_framerateChoice->currentData().toInt();
+        m_defaultTargetFramerate->setVisible(choice < 0);
+        showUnsavedState();
+    });
     connect(m_defaultTargetFramerate, &QSpinBox::valueChanged, this, &MainWindow::showUnsavedState);
+    framerate->addWidget(m_framerateChoice);
     framerate->addWidget(m_defaultTargetFramerate);
     framerate->addStretch(1);
     content->addLayout(framerate);
     QLabel *framerateNote = new QLabel(QStringLiteral("Only used while vsync is off."), parent);
     framerateNote->setEnabled(false);
     content->addWidget(framerateNote);
-    connect(m_vsync, &QCheckBox::toggled, this, [this](bool isOn) { m_defaultTargetFramerate->setEnabled(!isOn); });
+    connect(m_vsync, &QCheckBox::toggled, this, [this](bool isOn) {
+        m_framerateChoice->setEnabled(!isOn);
+        m_defaultTargetFramerate->setEnabled(!isOn);
+    });
     return page;
 }
 
@@ -820,6 +838,24 @@ QWidget *MainWindow::buildPlatformIcon(Platform platform, QWidget *parent)
     return group;
 }
 
+int MainWindow::chosenFramerate() const
+{
+    int choice = m_framerateChoice->currentData().toInt();
+    return choice < 0 ? m_defaultTargetFramerate->value() : choice;
+}
+
+void MainWindow::showFramerate(int framerate)
+{
+    int index = m_framerateChoice->findData(framerate);
+    if (index < 0)
+    {
+        m_defaultTargetFramerate->setValue(framerate);
+        index = m_framerateChoice->findData(-1);
+    }
+    m_framerateChoice->setCurrentIndex(index);
+    m_defaultTargetFramerate->setVisible(m_framerateChoice->currentData().toInt() < 0);
+}
+
 void MainWindow::showDisplays()
 {
     m_sharedDisplayEditor->setDisplay(m_sharedDisplay);
@@ -956,7 +992,8 @@ void MainWindow::showProject()
 
     m_sharedDisplay = m_project.display();
     m_vsync->setChecked(m_project.vsync());
-    m_defaultTargetFramerate->setValue(m_project.defaultTargetFramerate());
+    showFramerate(m_project.defaultTargetFramerate());
+    m_framerateChoice->setEnabled(!m_project.vsync());
     m_defaultTargetFramerate->setEnabled(!m_project.vsync());
     showDisplays();
 
@@ -991,7 +1028,7 @@ bool MainWindow::hasUnsavedEdits() const
            || hasUnsavedPackagingText()
            || hasUnsavedDisplay()
            || m_vsync->isChecked() != m_project.vsync()
-           || m_defaultTargetFramerate->value() != m_project.defaultTargetFramerate()
+           || chosenFramerate() != m_project.defaultTargetFramerate()
            || hasUnsavedFiles();
 }
 
@@ -1291,7 +1328,7 @@ bool MainWindow::saveProject()
     }
     m_project.setDisplay(m_sharedDisplay);
     m_project.setVsync(m_vsync->isChecked());
-    m_project.setDefaultTargetFramerate(m_defaultTargetFramerate->value());
+    m_project.setDefaultTargetFramerate(chosenFramerate());
     m_project.dropPlatformDisplays();
 
     QString error;
