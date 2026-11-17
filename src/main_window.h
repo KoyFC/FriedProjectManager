@@ -125,6 +125,7 @@ private:
     QLabel *m_engineVersion = nullptr;
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;
+    QCheckBox *m_vsync = nullptr;
     QList<ImageFileEditor *> m_imageEditors;
     LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;
 

@@ -117,6 +117,16 @@ void Project::setPackagingText(const QString &section, const QString &key, const
     m_core.setPackagingText(fromQt(section), fromQt(key), fromQt(value));
 }
 
+bool Project::vsync() const
+{
+    return m_core.vsync();
+}
+
+void Project::setVsync(bool value)
+{
+    m_core.setVsync(value);
+}
+
 void Project::setDisplay(const DisplaySettings &value)
 {
     m_core.setDisplay(value);

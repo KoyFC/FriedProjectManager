@@ -381,6 +381,11 @@ QWidget *MainWindow::buildDisplayPage()
     connect(m_sharedDisplayEditor, &DisplayEditor::edited, this, &MainWindow::sharedDisplayEdited);
 
     content->addWidget(m_sharedDisplayEditor);
+
+    m_vsync = new QCheckBox(QStringLiteral("Vsync"), parent);
+    m_vsync->setToolTip(QStringLiteral("Makes a desktop window wait for the display's refresh. Consoles ignore it."));
+    connect(m_vsync, &QCheckBox::toggled, this, &MainWindow::showUnsavedState);
+    content->addWidget(m_vsync);
     return page;
 }
 
@@ -933,6 +938,7 @@ void MainWindow::showProject()
     showPackagingPlaceholders();
 
     m_sharedDisplay = m_project.display();
+    m_vsync->setChecked(m_project.vsync());
     showDisplays();
 
     showIcons();
@@ -965,6 +971,7 @@ bool MainWindow::hasUnsavedEdits() const
            || m_vitaTitleId->text() != m_project.vitaTitleId()
            || hasUnsavedPackagingText()
            || hasUnsavedDisplay()
+           || m_vsync->isChecked() != m_project.vsync()
            || hasUnsavedFiles();
 }
 
@@ -1263,6 +1270,7 @@ bool MainWindow::saveProject()
         m_project.setPackagingText(field.section, field.key, field.edit->text());
     }
     m_project.setDisplay(m_sharedDisplay);
+    m_project.setVsync(m_vsync->isChecked());
     m_project.dropPlatformDisplays();
 
     QString error;

@@ -35,6 +35,7 @@ public:
     // A line of packaging text a platform's section may give, empty when it falls back to the game's identity.
     QString packagingText(const QString &section, const QString &key) const;
     DisplaySettings display() const;
+    bool vsync() const;
 
     void setName(const QString &value);
     void setOrganization(const QString &value);
@@ -43,6 +44,7 @@ public:
     void setVitaTitleId(const QString &value);
     void setPackagingText(const QString &section, const QString &key, const QString &value);
     void setDisplay(const DisplaySettings &value);
+    void setVsync(bool value);
     // A display of a platform's own is no longer read by the engine, so saving takes any out.
     void dropPlatformDisplays();
 
