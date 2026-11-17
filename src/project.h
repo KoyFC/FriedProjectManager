@@ -36,6 +36,7 @@ public:
     QString packagingText(const QString &section, const QString &key) const;
     DisplaySettings display() const;
     bool vsync() const;
+    int defaultTargetFramerate() const;
 
     void setName(const QString &value);
     void setOrganization(const QString &value);
@@ -45,6 +46,7 @@ public:
     void setPackagingText(const QString &section, const QString &key, const QString &value);
     void setDisplay(const DisplaySettings &value);
     void setVsync(bool value);
+    void setDefaultTargetFramerate(int value);
     // A display of a platform's own is no longer read by the engine, so saving takes any out.
     void dropPlatformDisplays();
 

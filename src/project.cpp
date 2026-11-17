@@ -122,6 +122,16 @@ bool Project::vsync() const
     return m_core.vsync();
 }
 
+int Project::defaultTargetFramerate() const
+{
+    return m_core.defaultTargetFramerate();
+}
+
+void Project::setDefaultTargetFramerate(int value)
+{
+    m_core.setDefaultTargetFramerate(value);
+}
+
 void Project::setVsync(bool value)
 {
     m_core.setVsync(value);

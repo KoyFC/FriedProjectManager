@@ -39,6 +39,7 @@
 #include <QImage>
 #include <QKeySequence>
 #include <QLabel>
+#include <QSpinBox>
 #include <QLineEdit>
 #include <QListWidget>
 #include "editor_launcher.h"
@@ -386,6 +387,22 @@ QWidget *MainWindow::buildDisplayPage()
     m_vsync->setToolTip(QStringLiteral("Makes a desktop window wait for the display's refresh. Consoles ignore it."));
     connect(m_vsync, &QCheckBox::toggled, this, &MainWindow::showUnsavedState);
     content->addWidget(m_vsync);
+
+    QHBoxLayout *framerate = new QHBoxLayout();
+    framerate->addWidget(new QLabel(QStringLiteral("Default target framerate"), parent));
+    m_defaultTargetFramerate = new QSpinBox(parent);
+    m_defaultTargetFramerate->setRange(0, 1000);
+    m_defaultTargetFramerate->setSpecialValueText(QStringLiteral("No limit"));
+    m_defaultTargetFramerate->setToolTip(QStringLiteral("The frame rate the game starts at while vsync is off. The game can change it afterwards, "
+                                                        "for example from a settings menu."));
+    connect(m_defaultTargetFramerate, &QSpinBox::valueChanged, this, &MainWindow::showUnsavedState);
+    framerate->addWidget(m_defaultTargetFramerate);
+    framerate->addStretch(1);
+    content->addLayout(framerate);
+    QLabel *framerateNote = new QLabel(QStringLiteral("Only used while vsync is off."), parent);
+    framerateNote->setEnabled(false);
+    content->addWidget(framerateNote);
+    connect(m_vsync, &QCheckBox::toggled, this, [this](bool isOn) { m_defaultTargetFramerate->setEnabled(!isOn); });
     return page;
 }
 
@@ -939,6 +956,8 @@ void MainWindow::showProject()
 
     m_sharedDisplay = m_project.display();
     m_vsync->setChecked(m_project.vsync());
+    m_defaultTargetFramerate->setValue(m_project.defaultTargetFramerate());
+    m_defaultTargetFramerate->setEnabled(!m_project.vsync());
     showDisplays();
 
     showIcons();
@@ -972,6 +991,7 @@ bool MainWindow::hasUnsavedEdits() const
            || hasUnsavedPackagingText()
            || hasUnsavedDisplay()
            || m_vsync->isChecked() != m_project.vsync()
+           || m_defaultTargetFramerate->value() != m_project.defaultTargetFramerate()
            || hasUnsavedFiles();
 }
 
@@ -1271,6 +1291,7 @@ bool MainWindow::saveProject()
     }
     m_project.setDisplay(m_sharedDisplay);
     m_project.setVsync(m_vsync->isChecked());
+    m_project.setDefaultTargetFramerate(m_defaultTargetFramerate->value());
     m_project.dropPlatformDisplays();
 
     QString error;

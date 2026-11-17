@@ -18,6 +18,7 @@ class LiveAreaTemplateEditor;
 
 class QAction;
 class QCheckBox;
+class QSpinBox;
 class QFormLayout;
 class QLabel;
 class QLineEdit;
@@ -126,6 +127,7 @@ private:
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;
     QCheckBox *m_vsync = nullptr;
+    QSpinBox *m_defaultTargetFramerate = nullptr;
     QList<ImageFileEditor *> m_imageEditors;
     LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;
 
