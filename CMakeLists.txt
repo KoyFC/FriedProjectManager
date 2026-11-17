@@ -113,7 +113,7 @@ qt_add_resources(fried_project_manager "templates"
         templates/project/sce_sys/livearea/contents/bg.png
         templates/project/sce_sys/livearea/contents/startup.png
         templates/project/sce_sys/livearea/contents/template.xml
-        templates/project/src/components/Quit.hx
+        templates/project/src/nodes/Quit.hx
         templates/project/switch/icon.jpg
 )
 
