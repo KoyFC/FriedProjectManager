@@ -71,9 +71,9 @@ StorageDialog::StorageDialog(QWidget *parent)
     m_openFolder = buttons->addButton(QStringLiteral("Open Folder"), QDialogButtonBox::ActionRole);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->addWidget(helpLabel(QStringLiteral("What builds use outside the projects, by platform. Deleting what was "
+    layout->addWidget(helpLabel(QStringLiteral("What builds and the editor use outside the projects, by platform. Deleting what was "
                                                "downloaded costs nothing but downloading it again the next time a "
-                                               "build needs it. An SDK installed separately is only shown here, and "
+                                               "build or the editor needs it. An SDK installed separately is only shown here, and "
                                                "is removed with the installer that put it there."),
                                 this));
     layout->addWidget(m_list, 1);

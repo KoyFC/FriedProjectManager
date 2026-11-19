@@ -1,5 +1,6 @@
 #include "storage.h"
 
+#include "editor_install.h"
 #include "emscripten_sdk.h"
 #include "windows_toolchain.h"
 
@@ -84,6 +85,21 @@ QList<StorageItem> Storage::items()
         found << StorageItem{QFileInfo(emsdk).fileName(), QStringLiteral("Web"), emsdk,
                              StorageItem::Origin::ProjectManager, QFileInfo::exists(EmscriptenSdk::toolchainFile(emsdk))};
     }
+    // Each version of Fried Editor has a folder of its own, and one still being unpacked is named after the version it will be.
+    const QDir editors(EditorInstall::versionsDirectory());
+    for (const QFileInfo &folder : editors.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+    {
+        QString version = folder.fileName();
+        const bool unpacking = version.endsWith(QStringLiteral("-unpacking"));
+        if (unpacking)
+        {
+            version.chop(QStringLiteral("-unpacking").size());
+        }
+        found << StorageItem{QStringLiteral("Fried Editor %1").arg(version), QStringLiteral("Fried Editor"),
+                             folder.absoluteFilePath(), StorageItem::Origin::ProjectManager,
+                             !unpacking && EditorInstall::isInstalled(version)};
+    }
+
     appendSdk(found, QStringLiteral("Emscripten SDK"), QStringLiteral("Web"), qEnvironmentVariable("EMSDK"));
 
     appendSdk(found, QStringLiteral("VitaSDK"), QStringLiteral("PlayStation Vita"), qEnvironmentVariable("VITASDK"));
