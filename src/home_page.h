@@ -22,6 +22,7 @@ signals:
     void newProjectRequested();
     void openProjectRequested();
     void storageRequested();
+    void editorDownloadRequested();
 
 private:
     void openSelected();
@@ -29,6 +30,7 @@ private:
     void folderOfSelected();
     void removeSelected();
     void selectionChanged();
+    void showEditor();
 
     void select(const QString &path);
     QString selectedPath() const;
@@ -40,4 +42,6 @@ private:
     QPushButton *m_open = nullptr;
     QPushButton *m_folder = nullptr;
     QPushButton *m_remove = nullptr;
+    QLabel *m_editorStatus = nullptr;
+    QPushButton *m_editorDownload = nullptr;
 };

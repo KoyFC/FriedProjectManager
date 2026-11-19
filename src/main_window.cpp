@@ -132,6 +132,10 @@ void MainWindow::buildPages()
     connect(m_home, &HomePage::newProjectRequested, this, &MainWindow::newProject);
     connect(m_home, &HomePage::openProjectRequested, this, &MainWindow::chooseProject);
     connect(m_home, &HomePage::storageRequested, this, &MainWindow::showStorage);
+    connect(m_home, &HomePage::editorDownloadRequested, this, [this] {
+        EditorLauncher::install(this);
+        m_home->refresh();
+    });
 
     m_projectView = buildProjectView();
 

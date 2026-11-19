@@ -1,5 +1,7 @@
 #include "home_page.h"
 
+#include "editor_install.h"
+#include "editor_launcher.h"
 #include "icon.h"
 #include "project.h"
 #include "recent_projects.h"
@@ -23,6 +25,7 @@
 #include <QPixmap>
 #include <QSize>
 #include <QUrl>
+#include <QVersionNumber>
 #include <QVBoxLayout>
 
 namespace
@@ -120,9 +123,18 @@ HomePage::HomePage(QWidget *parent)
     buttons->addWidget(browse);
 
     QPushButton *storage = new QPushButton(QStringLiteral("Storage..."), this);
-    storage->setToolTip(QStringLiteral("What builds have downloaded outside the projects, and how much space it "
+    storage->setToolTip(QStringLiteral("What builds and the editor have downloaded outside the projects, and how much space it "
                                          "takes."));
     connect(storage, &QPushButton::clicked, this, &HomePage::storageRequested);
+
+    m_editorStatus = new QLabel(this);
+    m_editorStatus->setWordWrap(true);
+    m_editorDownload = new QPushButton(this);
+    connect(m_editorDownload, &QPushButton::clicked, this, &HomePage::editorDownloadRequested);
+
+    QHBoxLayout *editorLine = new QHBoxLayout;
+    editorLine->addWidget(m_editorStatus, 1);
+    editorLine->addWidget(m_editorDownload);
 
     QHBoxLayout *header = new QHBoxLayout;
     header->addWidget(heading);
@@ -133,6 +145,7 @@ HomePage::HomePage(QWidget *parent)
     layout->addLayout(header);
     layout->addWidget(m_area, 1);
     layout->addLayout(buttons);
+    layout->addLayout(editorLine);
 }
 
 void HomePage::refresh()
@@ -160,6 +173,38 @@ void HomePage::refresh()
 
     m_area->setCurrentWidget(m_list->count() == 0 ? static_cast<QWidget *>(m_empty) : m_list);
     selectionChanged();
+    showEditor();
+}
+
+void HomePage::showEditor()
+{
+    const QString override = EditorLauncher::overrideExecutable();
+    const QStringList installed = EditorInstall::installedVersions();
+    const QString latest = EditorInstall::latestVersion();
+
+    if (!override.isEmpty())
+    {
+        m_editorStatus->setText(QStringLiteral("Fried Editor from FRIED_EDITOR: %1").arg(QDir::toNativeSeparators(override)));
+        m_editorDownload->hide();
+    }
+    else if (installed.isEmpty())
+    {
+        m_editorStatus->setText(QStringLiteral("Fried Editor is not installed."));
+        m_editorDownload->setText(QStringLiteral("Download Editor..."));
+        m_editorDownload->show();
+    }
+    else if (QVersionNumber::fromString(installed.first()) < QVersionNumber::fromString(latest))
+    {
+        m_editorStatus->setText(
+            QStringLiteral("Fried Editor %1 is installed, and %2 is available.").arg(installed.first(), latest));
+        m_editorDownload->setText(QStringLiteral("Update Editor..."));
+        m_editorDownload->show();
+    }
+    else
+    {
+        m_editorStatus->setText(QStringLiteral("Fried Editor %1").arg(installed.first()));
+        m_editorDownload->hide();
+    }
 }
 
 void HomePage::openSelected()
