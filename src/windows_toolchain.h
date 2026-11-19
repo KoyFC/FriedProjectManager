@@ -5,13 +5,9 @@
 #include <QString>
 #include <QStringList>
 
-// The C++ compiler a PC build uses on Windows: Visual Studio when it is
-// installed, and otherwise a w64devkit the tool downloads for itself.
+// The C++ compiler a PC build uses on Windows when Visual Studio is not installed: a w64devkit the tool downloads for itself.
 namespace WindowsToolchain
 {
-    // Empty when there is no Visual Studio with its C++ tools, or no CMake to drive it.
-    QString visualStudioCmake();
-
     QString w64devkitDirectory();
     bool w64devkitInstalled();
 

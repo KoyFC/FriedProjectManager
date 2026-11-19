@@ -5,12 +5,12 @@
 
 namespace
 {
-    // What this machine has to build with. Visual Studio is the one thing FriedCore does not look for, since asking runs a program.
+    // What this machine has to build with.
     fried::core::Toolchains toolchains()
     {
         fried::core::Toolchains found = fried::core::detectToolchains(
             {fromQt(EmscriptenSdk::managedDirectory()), fromQt(WindowsToolchain::w64devkitDirectory())});
-        found.m_visualStudioCmake = fromQt(WindowsToolchain::visualStudioCmake());
+        found.m_visualStudioCmake = fried::core::visualStudioCmake();
         return found;
     }
 
@@ -38,7 +38,7 @@ bool Build::needsCompilerDownload(BuildTarget target)
 QProcessEnvironment Build::environment(BuildTarget target)
 {
 #ifdef Q_OS_WIN
-    if (target == BuildTarget::Pc && WindowsToolchain::visualStudioCmake().isEmpty())
+    if (target == BuildTarget::Pc && fried::core::visualStudioCmake().empty())
     {
         return WindowsToolchain::w64devkitEnvironment();
     }

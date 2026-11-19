@@ -3,7 +3,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QProcess>
 #include <QStandardPaths>
 
 namespace
@@ -35,48 +34,6 @@ namespace
         return QDir::toNativeSeparators(
             QDir(WindowsToolchain::w64devkitDirectory()).filePath(QStringLiteral("bin/%1.exe").arg(name)));
     }
-
-    QString visualStudioInstallation()
-    {
-        const QString vswhere = QDir(qEnvironmentVariable("ProgramFiles(x86)"))
-                                    .filePath(QStringLiteral("Microsoft Visual Studio/Installer/vswhere.exe"));
-        if (!QFileInfo::exists(vswhere))
-        {
-            return QString();
-        }
-
-        QProcess query;
-        query.start(vswhere, {QStringLiteral("-latest"), QStringLiteral("-products"), QStringLiteral("*"),
-                              QStringLiteral("-requires"),
-                              QStringLiteral("Microsoft.VisualStudio.Component.VC.Tools.x86.x64"),
-                              QStringLiteral("-property"), QStringLiteral("installationPath")});
-        if (!query.waitForFinished() || query.exitCode() != 0)
-        {
-            return QString();
-        }
-
-        return QString::fromLocal8Bit(query.readAllStandardOutput()).trimmed();
-    }
-}
-
-QString WindowsToolchain::visualStudioCmake()
-{
-    const QString installation = visualStudioInstallation();
-    if (installation.isEmpty())
-    {
-        return QString();
-    }
-
-    const QString onPath = QStandardPaths::findExecutable(QStringLiteral("cmake"));
-    if (!onPath.isEmpty())
-    {
-        return onPath;
-    }
-
-    // The CMake that Visual Studio's C++ workload installs for its own use.
-    const QString bundled = QDir(installation).filePath(
-        QStringLiteral("Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"));
-    return QFileInfo::exists(bundled) ? QDir::toNativeSeparators(bundled) : QString();
 }
 
 QString WindowsToolchain::w64devkitDirectory()
