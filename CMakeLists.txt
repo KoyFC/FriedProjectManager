@@ -32,6 +32,8 @@ qt_add_executable(fried_project_manager
     src/display_editor.h
     src/display_editor.cpp
     src/engine_version.h
+    src/editor_install.cpp
+    src/editor_install.h
     src/editor_launcher.cpp
     src/editor_launcher.h
     src/engine_version.cpp

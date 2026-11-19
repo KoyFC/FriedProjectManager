@@ -48,6 +48,12 @@ A web build with no Emscripten SDK offers to download one, the way a PC build on
 
 The download runs in the command window like any build, as three commands: `curl.exe` and PowerShell's `Get-FileHash`, both part of Windows 10 and later, and the archive itself, a 7-Zip self-extractor that unpacks without asking when given `-y`. It unpacks into a folder of its own and is moved into place only once it is complete, so a download that was stopped never looks installed. Its tools are named by absolute path, and its `bin/` is put first on the `PATH` of the processes the build starts, for whatever CMake and GCC look up there.
 
+## Fried Editor
+
+The tool downloads Fried Editor the way it downloads w64devkit, and `editor_install.cpp` follows the same shape: the version and the SHA-256 of each platform's file are written in the code, `beginInstall()` clears what an earlier attempt left and lists the commands (`curl`, the checksum, the unpacking) for the command window, and `finishInstall()` moves the result into place only once it is complete. Each version has a folder of its own, `editor/<version>` in the data folder, so an update installs beside the one in use and the old one stays until Storage deletes it, which also means a version that fails with someone's project can still be run. The tool knows the newest release only, since that is what the checksums it carries are for, and it opens the newest one installed.
+
+On Linux the release is an AppImage, which is unpacked once when it is installed and started through its `AppRun`. That way it runs without FUSE, which a distribution may not have, and starts faster than an AppImage that unpacks itself every time. A folder named `<version>-unpacking` is an install that did not finish, and Storage shows it as incomplete.
+
 ## Icons
 
 A project keeps one icon per platform because no single file can serve them all: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, a `.nro` carries a 256x256 JPEG, a `.3dsx` a 48x48 icon with no transparency, a `.nds` a 32x32 one of 16 colors, and a `.g3a` two 92x64 ones, its menu icon unselected and selected. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.
