@@ -65,7 +65,7 @@ void AssetPanel::refresh()
     }
 
     m_summary->setText(QStringLiteral("%1 errors and %2 warnings. This only reports: the Fried Editor's Issues tab "
-                                      "can fix an oversized texture or a stereo sound.")
+                                      "can fix an oversized texture, a stereo sound or a Vita image without a palette.")
                            .arg(errors)
                            .arg(issues.size() - errors));
     m_issues->setPlainText(lines.join(QChar('\n')));

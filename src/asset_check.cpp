@@ -6,7 +6,7 @@
 
 bool AssetCheck::appliesTo(Platform platform)
 {
-    return platform == Platform::Nintendo3ds || platform == Platform::NintendoDs || platform == Platform::Cg50;
+    return platform == Platform::Vita || platform == Platform::Nintendo3ds || platform == Platform::NintendoDs || platform == Platform::Cg50;
 }
 
 QList<AssetIssue> AssetCheck::validate(Platform platform, const QString &projectDirectory)
@@ -15,7 +15,7 @@ QList<AssetIssue> AssetCheck::validate(Platform platform, const QString &project
     const QString prefix = QStringLiteral("game/");
 
     QList<AssetIssue> issues;
-    for (const fried::core::AssetIssue &found : fried::core::validateAssets(platform, fromQt(projectDirectory) + "/assets"))
+    for (const fried::core::AssetIssue &found : fried::core::validateAssets(platform, fromQt(projectDirectory)))
     {
         QString asset = toQt(found.m_asset);
         if (asset.startsWith(prefix))

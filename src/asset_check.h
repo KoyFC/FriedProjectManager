@@ -10,7 +10,7 @@ struct AssetIssue
 {
     bool isError = false;
 
-    // Relative to the project's assets folder, or empty for something about the project as a whole.
+    // Relative to the project's assets folder, "sce_sys/icon0.png" for a file of the platform's package, or empty for something about the project as a whole.
     QString asset;
     QString message;
 };
@@ -20,6 +20,6 @@ class AssetCheck
 public:
     static bool appliesTo(Platform platform);
 
-    // Checks the project's own assets, in assets/ under the project.
+    // Checks the project's own assets, in assets/ under the project, and the files of its package for the platform.
     static QList<AssetIssue> validate(Platform platform, const QString &projectDirectory);
 };
