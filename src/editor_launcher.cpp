@@ -2,8 +2,8 @@
 
 #include "command_dialog.h"
 #include "editor_install.h"
+#include "editor_version_dialog.h"
 
-#include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
@@ -37,16 +37,12 @@ QString EditorLauncher::findExecutable()
 
 bool EditorLauncher::install(QWidget *parent)
 {
-    const QString version = EditorInstall::latestVersion();
-    const QMessageBox::StandardButton answer = QMessageBox::question(
-        parent, QStringLiteral("Fried Editor"),
-        QStringLiteral("The Project Manager can download Fried Editor %1 from GitHub, a few MB, into %2 and open "
-                       "your projects with it. Download it now?")
-            .arg(version, QDir::toNativeSeparators(EditorInstall::versionsDirectory())));
-    if (answer != QMessageBox::Yes)
+    EditorVersionDialog choose(parent);
+    if (choose.exec() != QDialog::Accepted || choose.chosenVersion().isEmpty())
     {
         return false;
     }
+    const QString version = choose.chosenVersion();
 
     // The commands are listed first, since listing them clears what an earlier attempt left and makes the folder they run in.
     const QList<QStringList> commands = EditorInstall::beginInstall(version);
@@ -75,7 +71,7 @@ bool EditorLauncher::launch(const QString &projectDirectory, QWidget *parent)
     if (executable.isEmpty())
     {
         const QMessageBox::StandardButton answer = QMessageBox::question(
-            parent, QStringLiteral("Open in Editor"), QStringLiteral("Fried Editor is not installed. Download it now?"));
+            parent, QStringLiteral("Open in Editor"), QStringLiteral("Fried Editor is not installed. Choose a version to download now?"));
         if (answer != QMessageBox::Yes || !install(parent))
         {
             return false;

@@ -4,12 +4,9 @@
 #include <QString>
 #include <QStringList>
 
-// Fried Editor releases from GitHub, one folder per version in the tool's data folder, so a new version installs beside the one in use.
+// Fried Editor releases from GitHub, one folder per version in the tool's data folder, so any published version installs beside the others.
 namespace EditorInstall
 {
-    // The newest release this tool knows the checksum of.
-    QString latestVersion();
-
     QString versionsDirectory();
     QString directory(const QString &version);
     QString executable(const QString &version);
@@ -17,6 +14,10 @@ namespace EditorInstall
 
     // Complete installs only, newest first.
     QStringList installedVersions();
+
+    // The repository's tags, which is how releases are named, and the versions they are, newest first.
+    QStringList listRemoteVersionsCommand();
+    QStringList parseRemoteVersions(const QString &listing);
 
     // Where the download is unpacked, and where the install commands have to run.
     QString unpackDirectory(const QString &version);

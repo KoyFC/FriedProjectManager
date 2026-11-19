@@ -1,10 +1,8 @@
 #include "editor_install.h"
 
 #include <QDir>
-#include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
-#include <QTextStream>
 #include <QVersionNumber>
 
 #include <algorithm>
@@ -12,10 +10,10 @@
 
 namespace
 {
-    const QString s_version = QStringLiteral("0.1.0");
-    const QString s_releases = QStringLiteral("https://github.com/KoyFC/FriedEditor/releases/download");
-    const QString s_linuxSha256 = QStringLiteral("ceb64e06129ebd6552d2d819210722553a077b95c0edf4d183a73e1a3491bdfa");
-    const QString s_windowsSha256 = QStringLiteral("4474caf505f88cbcb1a037fef6d69739cc8fb711f5c50ef98998fa060117cb9d");
+    const QString s_repository = QStringLiteral("https://github.com/KoyFC/FriedEditor");
+    const QString s_tagsPrefix = QStringLiteral("refs/tags/v");
+    const QString s_peeledSuffix = QStringLiteral("^{}");
+    const QString s_checksums = QStringLiteral("SHA256SUMS");
 
     // What an unfinished install is called, beside the folder it will become.
     const QString s_unpackingSuffix = QStringLiteral("-unpacking");
@@ -29,19 +27,19 @@ namespace
 #endif
     }
 
-    QString downloadPath(const QString &version)
+    QString releaseUrl(const QString &version, const QString &file)
     {
-        return QDir(EditorInstall::versionsDirectory()).filePath(assetName(version));
+        return QStringLiteral("%1/releases/download/v%2/%3").arg(s_repository, version, file);
     }
 
-    QString checksumPath(const QString &version)
+    // The folder the unpacked release is in before it is moved into place.
+    QString payloadDirectory(const QString &version)
     {
-        return downloadPath(version) + QStringLiteral(".sha256");
-    }
-
-    QString downloadUrl(const QString &version)
-    {
-        return QStringLiteral("%1/v%2/%3").arg(s_releases, version, assetName(version));
+#ifdef Q_OS_WIN
+        return QDir(EditorInstall::unpackDirectory(version)).filePath(QStringLiteral("files"));
+#else
+        return QDir(EditorInstall::unpackDirectory(version)).filePath(QStringLiteral("squashfs-root"));
+#endif
     }
 
     // Only a folder that is named by a version and nothing else is a version.
@@ -51,11 +49,6 @@ namespace
         const QVersionNumber version = QVersionNumber::fromString(name, &end);
         return end == name.size() ? version : QVersionNumber();
     }
-}
-
-QString EditorInstall::latestVersion()
-{
-    return s_version;
 }
 
 QString EditorInstall::versionsDirectory()
@@ -110,46 +103,94 @@ QStringList EditorInstall::installedVersions()
     return names;
 }
 
+QStringList EditorInstall::listRemoteVersionsCommand()
+{
+    return {QStringLiteral("git"), QStringLiteral("ls-remote"), QStringLiteral("--tags"), s_repository + QStringLiteral(".git")};
+}
+
+QStringList EditorInstall::parseRemoteVersions(const QString &listing)
+{
+    QList<QVersionNumber> versions;
+    for (const QString &line : listing.split(QChar('\n'), Qt::SkipEmptyParts))
+    {
+        const QStringList fields = line.split(QChar('\t'));
+        if (fields.size() != 2 || !fields[1].startsWith(s_tagsPrefix))
+        {
+            continue;
+        }
+
+        // An annotated tag is listed a second time, peeled.
+        QString name = fields[1].trimmed().mid(s_tagsPrefix.size());
+        if (name.endsWith(s_peeledSuffix))
+        {
+            continue;
+        }
+
+        const QVersionNumber version = versionNamed(name);
+        if (!version.isNull() && !versions.contains(version))
+        {
+            versions << version;
+        }
+    }
+    std::sort(versions.begin(), versions.end(), std::greater<QVersionNumber>());
+
+    QStringList names;
+    for (const QVersionNumber &version : versions)
+    {
+        names << version.toString();
+    }
+    return names;
+}
+
 QList<QStringList> EditorInstall::beginInstall(const QString &version)
 {
     QDir().mkpath(versionsDirectory());
-    QFile::remove(downloadPath(version));
-    QFile::remove(checksumPath(version));
     QDir(unpackDirectory(version)).removeRecursively();
     QDir().mkpath(unpackDirectory(version));
 
-    const QString download = QDir::toNativeSeparators(downloadPath(version));
-    const QString unpacked = QDir::toNativeSeparators(unpackDirectory(version));
+    const QString asset = assetName(version);
+    const QString download = QDir::toNativeSeparators(QDir(unpackDirectory(version)).filePath(asset));
+    const QString checksums = QDir::toNativeSeparators(QDir(unpackDirectory(version)).filePath(s_checksums));
+
+    // The checksum comes from the same release as the file, so it catches a download that was cut short or garbled.
+    const QStringList fetchChecksums = {
+#ifdef Q_OS_WIN
+        QStringLiteral("curl.exe"),
+#else
+        QStringLiteral("curl"),
+#endif
+        QStringLiteral("--fail"), QStringLiteral("--location"), QStringLiteral("--retry"), QStringLiteral("3"),
+        QStringLiteral("--output"), checksums, releaseUrl(version, s_checksums)};
+    QStringList fetchAsset = fetchChecksums;
+    fetchAsset[fetchAsset.size() - 2] = download;
+    fetchAsset[fetchAsset.size() - 1] = releaseUrl(version, asset);
 
 #ifdef Q_OS_WIN
     const QString hashCheck =
-        QStringLiteral("if ((Get-FileHash -Algorithm SHA256 -LiteralPath '%1').Hash -ne '%2') "
-                       "{ Write-Error 'The download is not the Fried Editor %3 release.'; exit 1 }")
-            .arg(download, s_windowsSha256.toUpper(), version);
+        QStringLiteral("$line = Get-Content -LiteralPath '%1' | Where-Object { $_ -like '*%2' }; "
+                       "$actual = (Get-FileHash -Algorithm SHA256 -LiteralPath '%3').Hash; "
+                       "if (-not $line -or ($line -split ' ')[0].ToUpper() -ne $actual) "
+                       "{ Write-Error 'The download is not the Fried Editor %4 release.'; exit 1 }")
+            .arg(checksums, asset, download, version);
 
     return {
-        {QStringLiteral("curl.exe"), QStringLiteral("--fail"), QStringLiteral("--location"), QStringLiteral("--retry"),
-         QStringLiteral("3"), QStringLiteral("--output"), download, downloadUrl(version)},
+        fetchChecksums,
+        fetchAsset,
         {QStringLiteral("powershell.exe"), QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
          QStringLiteral("-Command"), hashCheck},
         {QStringLiteral("powershell.exe"), QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
          QStringLiteral("-Command"),
-         QStringLiteral("Expand-Archive -LiteralPath '%1' -DestinationPath '%2' -Force").arg(download, unpacked)},
+         QStringLiteral("Expand-Archive -LiteralPath '%1' -DestinationPath '%2' -Force")
+             .arg(download, QDir::toNativeSeparators(payloadDirectory(version)))},
     };
 #else
-    // sha256sum reads what to check from a file, which names the download by its full path.
-    QFile checksum(checksumPath(version));
-    if (checksum.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
-        QTextStream(&checksum) << s_linuxSha256 << "  " << download << "\n";
-    }
-
     return {
-        {QStringLiteral("curl"), QStringLiteral("--fail"), QStringLiteral("--location"), QStringLiteral("--retry"),
-         QStringLiteral("3"), QStringLiteral("--output"), download, downloadUrl(version)},
-        {QStringLiteral("sha256sum"), QStringLiteral("--check"), QStringLiteral("--strict"), checksumPath(version)},
+        fetchChecksums,
+        fetchAsset,
+        // Run in the unpacking folder, where the file the list names is.
+        {QStringLiteral("sha256sum"), QStringLiteral("--check"), QStringLiteral("--ignore-missing"), s_checksums},
         {QStringLiteral("chmod"), QStringLiteral("+x"), download},
-        // Leaves squashfs-root/ in the folder the command runs in, which is the unpacking one.
+        // Leaves squashfs-root/ in the folder the command runs in.
         {download, QStringLiteral("--appimage-extract")},
     };
 #endif
@@ -157,18 +198,10 @@ QList<QStringList> EditorInstall::beginInstall(const QString &version)
 
 bool EditorInstall::finishInstall(const QString &version, bool unpacked, QString *error)
 {
-    QFile::remove(downloadPath(version));
-    QFile::remove(checksumPath(version));
-
     if (unpacked)
     {
         QDir(directory(version)).removeRecursively();
-#ifdef Q_OS_WIN
-        const QString root = unpackDirectory(version);
-#else
-        const QString root = QDir(unpackDirectory(version)).filePath(QStringLiteral("squashfs-root"));
-#endif
-        unpacked = QDir().rename(root, directory(version));
+        unpacked = QDir().rename(payloadDirectory(version), directory(version));
     }
     QDir(unpackDirectory(version)).removeRecursively();
 

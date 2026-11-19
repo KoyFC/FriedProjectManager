@@ -25,7 +25,6 @@
 #include <QPixmap>
 #include <QSize>
 #include <QUrl>
-#include <QVersionNumber>
 #include <QVBoxLayout>
 
 namespace
@@ -180,7 +179,6 @@ void HomePage::showEditor()
 {
     const QString override = EditorLauncher::overrideExecutable();
     const QStringList installed = EditorInstall::installedVersions();
-    const QString latest = EditorInstall::latestVersion();
 
     if (!override.isEmpty())
     {
@@ -193,17 +191,16 @@ void HomePage::showEditor()
         m_editorDownload->setText(QStringLiteral("Download Editor..."));
         m_editorDownload->show();
     }
-    else if (QVersionNumber::fromString(installed.first()) < QVersionNumber::fromString(latest))
-    {
-        m_editorStatus->setText(
-            QStringLiteral("Fried Editor %1 is installed, and %2 is available.").arg(installed.first(), latest));
-        m_editorDownload->setText(QStringLiteral("Update Editor..."));
-        m_editorDownload->show();
-    }
     else
     {
-        m_editorStatus->setText(QStringLiteral("Fried Editor %1").arg(installed.first()));
-        m_editorDownload->hide();
+        QString text = QStringLiteral("Fried Editor %1").arg(installed.first());
+        if (installed.size() > 1)
+        {
+            text += QStringLiteral(", and installed beside it: %1").arg(installed.mid(1).join(QStringLiteral(", ")));
+        }
+        m_editorStatus->setText(text);
+        m_editorDownload->setText(QStringLiteral("Editor Versions..."));
+        m_editorDownload->show();
     }
 }
 
