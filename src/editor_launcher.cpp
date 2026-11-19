@@ -4,6 +4,8 @@
 #include "editor_install.h"
 #include "editor_version_dialog.h"
 
+#include <QCoreApplication>
+#include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
@@ -17,18 +19,32 @@ namespace
     }
 }
 
-QString EditorLauncher::overrideExecutable()
+QString EditorLauncher::localExecutable()
 {
     const QString fromEnvironment = qEnvironmentVariable("FRIED_EDITOR");
-    return isRunnable(fromEnvironment) ? fromEnvironment : QString();
+    if (isRunnable(fromEnvironment))
+    {
+        return fromEnvironment;
+    }
+
+    // The repositories are siblings, as the engine's and this one's are.
+    const QDir beside(QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/../../FriedEditor/build/app_imgui")));
+    for (const QString &name : {QStringLiteral("fried_editor"), QStringLiteral("fried_editor.exe")})
+    {
+        if (isRunnable(beside.filePath(name)))
+        {
+            return beside.filePath(name);
+        }
+    }
+    return QString();
 }
 
 QString EditorLauncher::findExecutable()
 {
-    const QString override = overrideExecutable();
-    if (!override.isEmpty())
+    const QString local = localExecutable();
+    if (!local.isEmpty())
     {
-        return override;
+        return local;
     }
 
     const QStringList installed = EditorInstall::installedVersions();

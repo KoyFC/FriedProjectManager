@@ -177,12 +177,12 @@ void HomePage::refresh()
 
 void HomePage::showEditor()
 {
-    const QString override = EditorLauncher::overrideExecutable();
+    const QString local = EditorLauncher::localExecutable();
     const QStringList installed = EditorInstall::installedVersions();
 
-    if (!override.isEmpty())
+    if (!local.isEmpty())
     {
-        m_editorStatus->setText(QStringLiteral("Fried Editor from FRIED_EDITOR: %1").arg(QDir::toNativeSeparators(override)));
+        m_editorStatus->setText(QStringLiteral("Fried Editor, local build: %1").arg(QDir::toNativeSeparators(local)));
         m_editorDownload->hide();
     }
     else if (installed.isEmpty())

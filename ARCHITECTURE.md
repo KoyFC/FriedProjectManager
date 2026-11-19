@@ -56,7 +56,7 @@ Each version has a folder of its own, `editor/<version>` in the data folder, so 
 
 On Linux the release is an AppImage, which is unpacked once when it is installed and started through its `AppRun`. That way it runs without FUSE, which a distribution may not have, and starts faster than an AppImage that unpacks itself every time.
 
-There is no choice of editor per project. Every release speaks the same protocol with the player, and an engine that does not is reported by the editor itself, which asks for the player to be rebuilt. `FRIED_EDITOR` names an executable that is used instead of any install.
+There is no choice of editor per project. Every release speaks the same protocol with the player, and an engine that does not is reported by the editor itself, which asks for the player to be rebuilt. A local build is used instead of any install, so the editor can be developed without publishing a release: the executable `FRIED_EDITOR` names, or else the build in a `FriedEditor` checkout beside this repository, found from the tool's own folder, since the repositories are siblings.
 
 The editor builds a player from the project's engine the first time it opens, so before starting it the tool asks what a PC build asks, through FriedCore's `Build::steps`: Haxe and CMake on the `PATH`, and on Windows Visual Studio or w64devkit. A machine that lacks one is told what, and may open the editor anyway, since a player built before still works.
 
