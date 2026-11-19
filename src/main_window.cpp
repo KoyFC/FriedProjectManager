@@ -702,6 +702,36 @@ bool MainWindow::confirmLeavingProject()
 
 void MainWindow::openInEditor()
 {
+    // The editor builds a player from the project's engine the first time it opens, with what a PC build uses.
+    if (Build::needsCompilerDownload(BuildTarget::Pc))
+    {
+        if (!downloadCompiler())
+        {
+            return;
+        }
+    }
+    else
+    {
+        QString error;
+        if (Build::commands(BuildTarget::Pc, Build::Type::Debug, false, m_project.directory(),
+                            Build::defaultDirectory(BuildTarget::Pc), &error)
+                .isEmpty())
+        {
+            QMessageBox ask(QMessageBox::Warning, QStringLiteral("Open in Editor"),
+                            QStringLiteral("The editor builds a player from the project's engine the first time it "
+                                           "opens it, and this machine cannot build yet: %1\n\nA player built before "
+                                           "still works, so the editor may open anyway.")
+                                .arg(error),
+                            QMessageBox::Cancel, this);
+            QPushButton *openAnyway = ask.addButton(QStringLiteral("Open Anyway"), QMessageBox::AcceptRole);
+            ask.exec();
+            if (ask.clickedButton() != openAnyway)
+            {
+                return;
+            }
+        }
+    }
+
     if (EditorLauncher::launch(m_project.directory(), this))
     {
         statusBar()->showMessage(QStringLiteral("Opened %1 in the editor").arg(m_project.name()), 4000);

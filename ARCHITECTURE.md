@@ -54,6 +54,10 @@ The tool downloads Fried Editor the way it downloads w64devkit, and `editor_inst
 
 On Linux the release is an AppImage, which is unpacked once when it is installed and started through its `AppRun`. That way it runs without FUSE, which a distribution may not have, and starts faster than an AppImage that unpacks itself every time. A folder named `<version>-unpacking` is an install that did not finish, and Storage shows it as incomplete.
 
+There is no choice of editor per project. Every release speaks the same protocol with the player, and an engine that does not is reported by the editor itself, which asks for the player to be rebuilt. `FRIED_EDITOR` names an executable that is used instead of any install.
+
+The editor builds a player from the project's engine the first time it opens, so before starting it the tool asks what a PC build asks, through FriedCore's `Build::steps`: Haxe and CMake on the `PATH`, and on Windows Visual Studio or w64devkit. A machine that lacks one is told what, and may open the editor anyway, since a player built before still works.
+
 ## Icons
 
 A project keeps one icon per platform because no single file can serve them all: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, a `.nro` carries a 256x256 JPEG, a `.3dsx` a 48x48 icon with no transparency, a `.nds` a 32x32 one of 16 colors, and a `.g3a` two 92x64 ones, its menu icon unselected and selected. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.

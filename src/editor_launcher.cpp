@@ -1,17 +1,15 @@
 #include "editor_launcher.h"
 
-#include <QCoreApplication>
+#include "command_dialog.h"
+#include "editor_install.h"
+
 #include <QDir>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
-#include <QSettings>
 
 namespace
 {
-    const QString s_editorKey = QStringLiteral("editorExecutable");
-
     bool isRunnable(const QString &path)
     {
         const QFileInfo info(path);
@@ -19,32 +17,56 @@ namespace
     }
 }
 
+QString EditorLauncher::overrideExecutable()
+{
+    const QString fromEnvironment = qEnvironmentVariable("FRIED_EDITOR");
+    return isRunnable(fromEnvironment) ? fromEnvironment : QString();
+}
+
 QString EditorLauncher::findExecutable()
 {
-    const QString remembered = QSettings().value(s_editorKey).toString();
-    if (isRunnable(remembered))
+    const QString override = overrideExecutable();
+    if (!override.isEmpty())
     {
-        return remembered;
+        return override;
     }
 
-    const QString fromEnvironment = qEnvironmentVariable("FRIED_EDITOR");
-    if (isRunnable(fromEnvironment))
+    const QStringList installed = EditorInstall::installedVersions();
+    return installed.isEmpty() ? QString() : EditorInstall::executable(installed.first());
+}
+
+bool EditorLauncher::install(QWidget *parent)
+{
+    const QString version = EditorInstall::latestVersion();
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        parent, QStringLiteral("Fried Editor"),
+        QStringLiteral("The Project Manager can download Fried Editor %1 from GitHub, a few MB, into %2 and open "
+                       "your projects with it. Download it now?")
+            .arg(version, QDir::toNativeSeparators(EditorInstall::versionsDirectory())));
+    if (answer != QMessageBox::Yes)
     {
-        return fromEnvironment;
+        return false;
     }
 
-    // The repositories are siblings, as the engine's and this one's are.
-    const QDir beside(QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/../../FriedEditor/build/app_imgui")));
-    for (const QString &name : {QStringLiteral("fried_editor"), QStringLiteral("fried_editor.exe")})
+    // The commands are listed first, since listing them clears what an earlier attempt left and makes the folder they run in.
+    const QList<QStringList> commands = EditorInstall::beginInstall(version);
+    CommandDialog download(parent, QStringLiteral("Download Fried Editor %1").arg(version),
+                           EditorInstall::unpackDirectory(version), commands);
+    download.setActivity(QStringLiteral("Downloading"));
+    download.exec();
+
+    QString error;
+    if (!EditorInstall::finishInstall(version, download.succeeded(), &error))
     {
-        if (isRunnable(beside.filePath(name)))
+        // A download that failed already said why in its own window.
+        if (download.succeeded())
         {
-            return beside.filePath(name);
+            QMessageBox::warning(parent, QStringLiteral("Fried Editor"), error);
         }
+        return false;
     }
 
-    const QDir home(QDir::homePath() + QStringLiteral("/Documentos/GitHub/FriedEditor/build/app_imgui"));
-    return isRunnable(home.filePath(QStringLiteral("fried_editor"))) ? home.filePath(QStringLiteral("fried_editor")) : QString();
+    return true;
 }
 
 bool EditorLauncher::launch(const QString &projectDirectory, QWidget *parent)
@@ -52,17 +74,13 @@ bool EditorLauncher::launch(const QString &projectDirectory, QWidget *parent)
     QString executable = findExecutable();
     if (executable.isEmpty())
     {
-        executable = QFileDialog::getOpenFileName(parent, QStringLiteral("Find Fried Editor"), QDir::homePath());
-        if (executable.isEmpty())
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            parent, QStringLiteral("Open in Editor"), QStringLiteral("Fried Editor is not installed. Download it now?"));
+        if (answer != QMessageBox::Yes || !install(parent))
         {
             return false;
         }
-        if (!isRunnable(executable))
-        {
-            QMessageBox::warning(parent, QStringLiteral("Open in Editor"), QStringLiteral("%1 is not an executable.").arg(executable));
-            return false;
-        }
-        QSettings().setValue(s_editorKey, executable);
+        executable = findExecutable();
     }
 
     if (!QProcess::startDetached(executable, {projectDirectory}))
