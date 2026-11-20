@@ -6,11 +6,12 @@ The engine lives in its own repository and is consumed by each game as a pinned 
 
 Written in C++ with [Qt 6](https://www.qt.io/) and [CMake](https://cmake.org/), on top of [FriedCore](https://github.com/KoyFC/FriedCore).
 
-## Requirements
+## Documentation
 
-- CMake 3.20+
-- A C++17 compiler
-- Qt 6.3+ with Qt Widgets, and its CMake package config available to `find_package(Qt6 ... )` (e.g. the distro's `qt6-qtbase-devel` package)
+The documentation is at [koyfc.github.io/FriedProjectManager](https://koyfc.github.io/FriedProjectManager/).
+
+- [Installing](https://koyfc.github.io/FriedProjectManager/installing/)
+- [Using the tool](https://koyfc.github.io/FriedProjectManager/using/projects/)
 
 ## Building
 
@@ -21,45 +22,3 @@ cmake -S . -B build
 cmake --build build
 ./build/fried_project_manager
 ```
-
-## What it does
-
-- **Home screen** with the last 20 projects opened, most recent first, each with its icon, name and directory. One whose `project.fried` is gone is listed as **(not found)**, and **Locate...** points it at where it moved to. For one that is found, the same button reads **Open Folder** and shows its folder in the file manager. **Remove** takes an entry off the list without deleting anything.
-- **New Project** writes a whole project directory, makes it a Git repository with the engine as a submodule, and opens it. Everything is left staged, so the first commit is yours:
-
-  ```
-  .gitignore         .vscode/           assets/icon.png    sce_sys/
-  CMakeLists.txt     build.hxml         assets/white.png   src/nodes/
-  3ds/icon.png       editor.hxml        project.fried      switch/icon.jpg
-  cg50/icon-uns.png  cg50/icon-sel.png  nds/icon.bmp       assets/scenes/
-  ```
-
-  The game has no `main` of its own: `build.hxml` names the engine's `fried.Entry`, which opens the window and loads the scene `project.fried` names, so what the game is made of is its nodes in `src/nodes/` and its scenes, made in [Fried Editor](https://github.com/KoyFC/FriedEditor), and updating the engine updates how a game starts. `.vscode/` marks `engine/` read-only, so the submodule is not edited by accident and an update still replaces it. `.vscode/` is the engine repository's configuration retargeted at the game. It debugs with gdb on Linux and with Visual Studio's debugger on Windows, so F5 on Windows needs Visual Studio's C++ tools and a `cmake` on the `PATH`, not the w64devkit the tool can download; a `build/` the tool configured with w64devkit has to be deleted before VS Code builds into it. The art in `assets/`, `sce_sys/`, `switch/`, `3ds/`, `nds/` and `cg50/` is flat white placeholder to replace.
-- **An open project** is a sidebar of pages: **General** for the game's identity, **Display** (which also holds vsync, the frame rate the game starts at and the physics rate, the fixed steps a second its `fixedUpdate` and kinematic bodies run at, written as `physicsRate`), **Icons**, **Engine**, and one page per platform with what only that platform declares. The build controls stay at the bottom whichever page is shown, and **Projects** above the sidebar goes back to the home screen.
-- **Open Project** and **Save** read and write `project.fried`, keeping any keys the tool does not know about. A project's folder given on the command line opens it at once. The window title is marked while the form holds unsaved edits. **Close Project** (Ctrl+W) goes back to the home screen. Anything that would discard unsaved edits offers to save them first.
-- **Open in Editor** (Ctrl+E, or the button at the top of the project sidebar) starts [Fried Editor](https://github.com/KoyFC/FriedEditor) on the project. The first time, the tool offers to download a Fried Editor release from GitHub into its own data folder, and from then on opens the newest one installed; For working on the editor itself, a local build is used instead of any download: the one `FRIED_EDITOR=<executable>` names, or the one in a `FriedEditor` checkout next to this repository's folder (`FriedEditor/build/app_imgui`). Before opening, it checks that the machine can build what the editor's player needs, the same as a PC build, and says what is missing, offering the compiler download on Windows.
-- **Build** (Ctrl+B) runs the whole pipeline for the selected target in a window that streams the output, colors it by message type, shows how long it has been running, reports how long it took once it is done and offers to open the build folder:
-
-  ```sh
-  haxe build.hxml
-  cmake -S . -B build[/windows|/vita|/switch|/3ds|/nds|/cg50|/web] -DCMAKE_BUILD_TYPE=Debug [-DCMAKE_TOOLCHAIN_FILE=<the target's>]
-  cmake --build build[/windows|/vita|/switch|/3ds|/nds|/cg50|/web] --config Debug --parallel
-  ```
-
-  A Windows build from Linux needs the MinGW-w64 cross compiler, `x86_64-w64-mingw32-g++`, on the `PATH` and uses the toolchain file the engine ships in `engine/cmake/toolchains/mingw-w64.cmake`; Wine runs the result. A Vita build needs `VITASDK` set, a Switch, 3DS or DS build needs `DEVKITPRO`, and an fx-CG50 build needs the fxSDK's `fxsdk` command on the `PATH`, which is how its toolchain file is found. A web build needs the Emscripten SDK, found through `EMSDK` (set by its `emsdk_env.sh`), in `~/emsdk` or in the copy the tool downloads for itself, which it offers to do, into its own data folder, when it finds none (this needs `git` and Python); the result is an `.html` with its `.js`, `.wasm` and `.data`, to be served over HTTP rather than opened from disk. All of them need `haxe` on the `PATH` the tool itself was started with, and every one but a PC build on Windows needs `cmake` there too.
-
-  On Windows, a PC build uses Visual Studio's C++ tools when they are installed, with the `cmake` on the `PATH` or else the one Visual Studio installs for itself. Without them, the first build offers to download [w64devkit](https://github.com/skeeto/w64devkit) 2.10.1, about 70 MB with GCC, CMake and Ninja, into `%LOCALAPPDATA%\Fried Engine\Fried Project Manager\tools`, checks it against its known SHA-256 and builds with it from then on, with the Ninja generator, so the executable lands directly in the build folder. Neither one is put on the system `PATH`. Switching between the two needs a fresh build folder, since CMake keeps the generator it first configured a folder with.
-- **Change Icons...** on the Icons page writes a project's icons from one source image, showing what each becomes first: `assets/icon.png` for the window, `sce_sys/icon0.png` for the Vita, `switch/icon.jpg` for the Switch, `3ds/icon.png` for the 3DS, `nds/icon.bmp` for the DS, and `cg50/icon-uns.png` and `cg50/icon-sel.png` for the fx-CG50, the menu icon unselected and selected.
-- Each platform's page also shows its own icon with a **Change Icon...** button, which writes only that platform's file from an image, at the size and in the format it reads.
-- The 3DS page has a **Description** and the DS page a **Second line** and a **Third line**, the package text those consoles show beside the name. Left empty they fall back to the version and to the organization and the version, and each stops accepting characters at what the package holds. They are written as `3ds.description`, `nds.subtitle1` and `nds.subtitle2`, which needs an engine that reads them.
-- The Vita, 3DS, DS and fx-CG50 pages check the project's `assets/` and package files against what that console takes and list what does not fit, from the same limits as the Fried Editor's Issues tab: an image in `sce_sys/` that is not a palette PNG, which the Vita's installer refuses, a texture over 1024 pixels a side on the 3DS and DS, a DS sound that is not mono PCM WAV, any sound on the fx-CG50, and more than 2048 KB of assets there. It only reports, since the editor is where a Vita image, an oversized texture or a stereo sound is fixed, with a copy of the original kept.
-- The home screen says which Fried Editors are installed, and **Editor Versions...** lists every published release to download another beside them (git has to be installed to list them). The newest installed opens projects, and Storage deletes the others.
-- **Storage...** on the home screen lists what builds use outside the projects, grouped by platform and with the size of each: for PC, the engine's dependency sources, unpacked once per machine for every PC build, the w64devkit the tool installs on Windows, and the Fried Editor versions it downloaded; for the consoles and the calculator, the SDK each one builds with. What was downloaded can be deleted from there, which only means downloading it again the next time a build needs it. An SDK is only shown, since it is removed with the installer that put it there.
-- **Change Version...** on the Engine page moves the project's `engine` submodule to another branch or tag of the engine repository, listed straight from it, with the one checked out marked as current. The project's own repository records the change once `engine` is committed.
-- **Display** sets how the game fills the screen: at the screen's native resolution, or scaled from a size it is designed for by fit, integer scale, expand, pixel or stretch, with a nearest or linear filter. Every platform uses the same display, and the pixel mode scales it by whole numbers on each screen, showing less of the world on a small one rather than a shrunken one. A new project starts in expand.
-- **LiveArea** on the Vita page sets the background (840x500) and start button (280x158) of the game's page on the Vita's home screen, converted to the palette PNGs the console reads, and its layout: the start button in the center, or on the right with a title, subtitle and footer beside it. All of it is written on Save; a `template.xml` edited by hand is left alone unless replaced on purpose.
-- **Boot Screen** on the Vita page sets `sce_sys/pic0.png`, the 960x544 image the console shows while the game starts. It is optional: **Remove** drops it on Save, and the engine packs it only when it is there.
-- Choosing a platform in the sidebar selects its target in the build bar, as Unity's platform list does, and the PC page, which covers every desktop target, keeps a Windows-from-Linux or web target already chosen. The build bar names the PC target for the system the tool runs on (Linux, Windows or macOS). **Build type**, **Log to file** and **Build directory** are remembered per project and per target, defaulting to `Debug`, unchecked and to `build`, `build/windows`, `build/vita`, `build/switch`, `build/3ds`, `build/nds`, `build/cg50` and `build/web`. The directory field is editable in full, with `{project}` standing for the project's own directory. Debug builds the Haxe side with `-debug`, so the engine logs where each message came from, and **Log to file** adds `-D fried_log_file`, so the game also writes `Player.log` in its user data folder.
-- Each platform's page shows whether it can be built on this machine, from the same checks a build makes, with the reason when it cannot and a **Download** button where the tool can fetch a compiler, and the exact commands the build bar would run, to copy into a terminal.
-
-A generated project also compiles by hand: `haxe build.hxml`, then `cmake -S . -B build && cmake --build build`, or the same with `-DCMAKE_TOOLCHAIN_FILE=engine/cmake/toolchains/mingw-w64.cmake` for a Windows `.exe` from Linux, `-DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake` for a `.vpk`, `-DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake` for a `.nro`, `-DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/3DS.cmake` for a `.3dsx`, `-DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/NDS.cmake` for a `.nds` and `-DCMAKE_TOOLCHAIN_FILE=<fxSDK prefix>/lib/cmake/fxsdk/FXCG50.cmake` for a `.g3a`, and `-DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake` for the web. Cloning the submodule needs `git` and network access to the engine repository.

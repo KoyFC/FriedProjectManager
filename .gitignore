@@ -400,3 +400,6 @@ FodyWeavers.xsd
 ## Fried Project Manager (Qt / CMake)
 # CMake build trees
 build/
+
+## Documentation site
+site/

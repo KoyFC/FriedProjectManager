@@ -1,0 +1,41 @@
+site_name: Fried Project Manager
+site_url: https://koyfc.github.io/FriedProjectManager/
+site_description: Fried Project Manager creates, lists and builds Fried Engine projects for PC, consoles, a calculator and the web.
+repo_url: https://github.com/KoyFC/FriedProjectManager
+repo_name: KoyFC/FriedProjectManager
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: { icon: material/brightness-7, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: { icon: material/brightness-4, name: Light mode }
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc: { permalink: true }
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - installing.md
+  - Using:
+      - using/projects.md
+      - using/project-settings.md
+      - using/building.md
+      - using/editor.md
+      - using/storage.md
