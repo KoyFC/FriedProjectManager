@@ -23,3 +23,7 @@ cmake -S . -B build
 cmake --build build
 ./build/fried_project_manager
 ```
+
+## License
+
+Fried Project Manager is released under the MIT License, see [`LICENSE`](LICENSE). Third party components are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

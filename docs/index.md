@@ -9,3 +9,4 @@ Written in C++ with [Qt 6](https://www.qt.io/) and [CMake](https://cmake.org/), 
 - [Installing](installing.md): the releases, and building the tool from source.
 - [Using](using/projects.md): projects, their settings, building, the Editor and storage.
 - [Architecture](architecture/index.md): the decisions behind what is implemented, and why.
+- [License](https://github.com/KoyFC/FriedProjectManager/blob/main/LICENSE): MIT, with the third party notices next to it.
