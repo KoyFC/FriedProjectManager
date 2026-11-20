@@ -39,3 +39,17 @@ nav:
       - using/building.md
       - using/editor.md
       - using/storage.md
+  - Architecture:
+      - architecture/index.md
+      - architecture/core.md
+      - architecture/project-layout.md
+      - architecture/project-file.md
+      - architecture/platforms.md
+      - architecture/windows-compiler.md
+      - architecture/editor.md
+      - architecture/icons.md
+      - architecture/livearea.md
+      - architecture/engine-version.md
+      - architecture/storage.md
+      - architecture/command-window.md
+      - architecture/settings.md

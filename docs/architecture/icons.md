@@ -1,0 +1,5 @@
+# Icons
+
+A project keeps one icon per platform because no single file can serve them all: the window icon is truecolor of any size, the Vita's installer reads a 128x128 palette PNG and rejects a truecolor one, a `.nro` carries a 256x256 JPEG, a `.3dsx` a 48x48 icon with no transparency, a `.nds` a 32x32 one of 16 colors, and a `.g3a` two 92x64 ones, its menu icon unselected and selected. So `Icon` is addressed by platform throughout, and the dialog holds a panel per platform rather than named members.
+
+Each conversion reports what it had to do to the source, because silently cropping or flattening someone's artwork is worse than saying so. How each platform's file is made, from the flattening to the median cut and the staged writing, is FriedCore's `Icon`, which the Fried Editor uses as well, so the two tools write the same bytes. The tool's part is reading the source image, since Qt reads more formats than FriedCore's decoders and `ImageConversion::read` is also what the LiveArea images use, and drawing the previews from what `Icon::render` gives back. `ImageConversion` stays for the LiveArea images and the boot screen.

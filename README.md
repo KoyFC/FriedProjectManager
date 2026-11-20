@@ -2,7 +2,7 @@
 
 A desktop application that creates [Fried Engine](https://github.com/KoyFC/FriedEngine) game projects and keeps editing them afterward: it generates a project that builds and runs out of the box, and reopens an existing one to change what its `project.fried` declares. It builds one for PC, the PlayStation Vita, the Nintendo Switch, the Nintendo 3DS, the Nintendo DS, the Casio fx-CG50 and the web, all from the same sources, and from Linux it also builds the PC game for Windows.
 
-The engine lives in its own repository and is consumed by each game as a pinned Git submodule. This repository holds only the tool. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the decisions behind it.
+The engine lives in its own repository and is consumed by each game as a pinned Git submodule. This repository holds only the tool. See [Architecture](https://koyfc.github.io/FriedProjectManager/architecture/) for the decisions behind it.
 
 Written in C++ with [Qt 6](https://www.qt.io/) and [CMake](https://cmake.org/), on top of [FriedCore](https://github.com/KoyFC/FriedCore).
 
@@ -12,6 +12,7 @@ The documentation is at [koyfc.github.io/FriedProjectManager](https://koyfc.gith
 
 - [Installing](https://koyfc.github.io/FriedProjectManager/installing/)
 - [Using the tool](https://koyfc.github.io/FriedProjectManager/using/projects/)
+- [Architecture](https://koyfc.github.io/FriedProjectManager/architecture/)
 
 ## Building
 
