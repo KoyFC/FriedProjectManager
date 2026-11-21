@@ -7,6 +7,8 @@
 
 #include <QString>
 
+#include <vector>
+
 using fried::core::DisplaySettings;
 
 // project.fried as the tool edits it. What the file means is FriedCore's; this takes and gives Qt's strings.
@@ -38,6 +40,8 @@ public:
     bool vsync() const;
     int defaultTargetFramerate() const;
     int physicsRate() const;
+    // Whether the engine builds the project for the platform, which it does for every one when the project declares none.
+    bool declares(Platform platform) const;
 
     void setName(const QString &value);
     void setOrganization(const QString &value);
@@ -49,6 +53,8 @@ public:
     void setVsync(bool value);
     void setDefaultTargetFramerate(int value);
     void setPhysicsRate(int value);
+    // Declaring every platform or none leaves no key behind, which the engine reads as every platform.
+    void setDeclaredPlatforms(const std::vector<Platform> &platforms);
     // A display of a platform's own is no longer read by the engine, so saving takes any out.
     void dropPlatformDisplays();
 

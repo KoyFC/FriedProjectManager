@@ -80,6 +80,8 @@ private:
     void showStorage();
     void chooseIcon();
     void showIcons();
+    void showDeclaredPlatforms();
+    bool hasUnsavedPlatforms() const;
     void showIconIn(QLabel *preview, Platform platform);
     void changePlatformIcon(Platform platform);
     void showEngineVersion();
@@ -132,6 +134,8 @@ private:
     QPushButton *m_changeEngineVersion = nullptr;
     DisplayEditor *m_sharedDisplayEditor = nullptr;
     QCheckBox *m_vsync = nullptr;
+    std::array<QCheckBox *, fried::core::s_platforms.size()> m_platformChecks = {};
+    QListWidget *m_platformList = nullptr;
     QComboBox *m_framerateChoice = nullptr;
     QSpinBox *m_defaultTargetFramerate = nullptr;
     QComboBox *m_physicsRateChoice = nullptr;

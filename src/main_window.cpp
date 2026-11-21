@@ -170,6 +170,7 @@ QWidget *MainWindow::buildProjectView()
     addSection(project, QStringLiteral("Engine"), buildEnginePage());
 
     QListWidget *platforms = newSectionList(panel);
+    m_platformList = platforms;
     for (const Platform platform : s_platforms)
     {
         addSection(platforms, toQt(platformLabel(platform)), buildPlatformPage(platform));
@@ -371,6 +372,20 @@ QWidget *MainWindow::buildGeneralPage()
                          QStringLiteral("Two digits, a dot and two digits (01.00), which is what the Vita requires."));
     m_windowTitle = addField(form, parent, QStringLiteral("Window title"),
                              QStringLiteral("The title of the game's window on the desktop."));
+
+    QGroupBox *platforms = new QGroupBox(QStringLiteral("Platforms"), parent);
+    QVBoxLayout *platformsLayout = new QVBoxLayout(platforms);
+    platformsLayout->addWidget(helpLabel(QStringLiteral("The platforms the game builds for. The engine refuses to build "
+                                                         "for any other, and checks the limits of these on every build."),
+                                         platforms));
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        QCheckBox *check = new QCheckBox(toQt(platformLabel(platform)), platforms);
+        connect(check, &QCheckBox::toggled, this, &MainWindow::showUnsavedState);
+        m_platformChecks[static_cast<size_t>(platform)] = check;
+        platformsLayout->addWidget(check);
+    }
+    content->addWidget(platforms);
     return page;
 }
 
@@ -1069,6 +1084,12 @@ void MainWindow::showProject()
 
     m_sharedDisplay = m_project.display();
     m_vsync->setChecked(m_project.vsync());
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        QCheckBox *check = m_platformChecks[static_cast<size_t>(platform)];
+        const QSignalBlocker blocker(check);
+        check->setChecked(m_project.declares(platform));
+    }
     showFramerate(m_project.defaultTargetFramerate());
     m_framerateChoice->setEnabled(!m_project.vsync());
     m_defaultTargetFramerate->setEnabled(!m_project.vsync());
@@ -1081,6 +1102,7 @@ void MainWindow::showProject()
         editor->setProjectDirectory(m_project.directory());
     }
     m_liveAreaTemplate->setProjectDirectory(m_project.directory());
+    showDeclaredPlatforms();
     m_buildBar->setProjectDirectory(m_project.directory());
     refreshToolchains();
     showEngineVersion();
@@ -1106,9 +1128,55 @@ bool MainWindow::hasUnsavedEdits() const
            || hasUnsavedPackagingText()
            || hasUnsavedDisplay()
            || m_vsync->isChecked() != m_project.vsync()
+           || hasUnsavedPlatforms()
            || chosenFramerate() != m_project.defaultTargetFramerate()
            || chosenPhysicsRate() != m_project.physicsRate()
            || hasUnsavedFiles();
+}
+
+bool MainWindow::hasUnsavedPlatforms() const
+{
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        if (m_platformChecks[static_cast<size_t>(platform)]->isChecked() != m_project.declares(platform))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// What the project is saved to build for: only its platforms have a page, and only its targets are offered to build.
+void MainWindow::showDeclaredPlatforms()
+{
+    int shown = 0;
+    bool isCurrentHidden = false;
+    for (int row = 0; row < m_platformList->count(); ++row)
+    {
+        QListWidgetItem *item = m_platformList->item(row);
+        const Platform platform = static_cast<Platform>(item->data(s_platformRole).toInt());
+
+        // The web has no page of its own, so the PC's holds it.
+        const bool isDeclared = m_project.declares(platform) || (platform == Platform::Pc && m_project.declares(Platform::Web));
+        item->setHidden(!isDeclared);
+        shown += isDeclared ? 1 : 0;
+        isCurrentHidden = isCurrentHidden || (!isDeclared && item->isSelected());
+    }
+    m_platformList->setFixedHeight(m_platformList->sizeHintForRow(0) * shown + 2 * m_platformList->frameWidth());
+    if (isCurrentHidden)
+    {
+        m_sectionLists.first()->setCurrentRow(0);
+    }
+
+    QList<BuildTarget> targets;
+    for (const BuildTarget target : buildTargets())
+    {
+        if (m_project.declares(platformOf(target)))
+        {
+            targets << target;
+        }
+    }
+    m_buildBar->setTargets(targets);
 }
 
 bool MainWindow::hasUnsavedPackagingText() const
@@ -1391,6 +1459,20 @@ bool MainWindow::saveProject()
         return false;
     }
 
+    std::vector<Platform> declared;
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        if (m_platformChecks[static_cast<size_t>(platform)]->isChecked())
+        {
+            declared.push_back(platform);
+        }
+    }
+    if (declared.empty())
+    {
+        QMessageBox::warning(this, QStringLiteral("Save"),
+                             QStringLiteral("A project has to build for at least one platform."));
+        return false;
+    }
     if (!writeFiles())
     {
         return false;
@@ -1406,6 +1488,7 @@ bool MainWindow::saveProject()
         m_project.setPackagingText(field.section, field.key, field.edit->text());
     }
     m_project.setDisplay(m_sharedDisplay);
+    m_project.setDeclaredPlatforms(declared);
     m_project.setVsync(m_vsync->isChecked());
     m_project.setDefaultTargetFramerate(chosenFramerate());
     m_project.setPhysicsRate(chosenPhysicsRate());
@@ -1419,6 +1502,7 @@ bool MainWindow::saveProject()
     }
 
     setWindowTitle(QStringLiteral("%1[*] - %2").arg(m_project.name(), s_applicationTitle));
+    showDeclaredPlatforms();
     showUnsavedState();
     statusBar()->showMessage(QStringLiteral("Saved %1").arg(QDir::toNativeSeparators(m_project.filePath())));
     return true;

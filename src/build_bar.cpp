@@ -112,6 +112,23 @@ void BuildBar::setProjectDirectory(const QString &directory)
     showRemembered();
 }
 
+void BuildBar::setTargets(const QList<BuildTarget> &targets)
+{
+    const int current = m_target->currentData().toInt();
+
+    {
+        const QSignalBlocker blocker(m_target);
+        m_target->clear();
+        for (const BuildTarget target : targets)
+        {
+            m_target->addItem(toQt(buildTargetName(target)), static_cast<int>(target));
+        }
+        const int kept = m_target->findData(current);
+        m_target->setCurrentIndex(kept >= 0 ? kept : 0);
+    }
+    showRemembered();
+}
+
 BuildTarget BuildBar::target() const
 {
     return static_cast<BuildTarget>(m_target->currentData().toInt());

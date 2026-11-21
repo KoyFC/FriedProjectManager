@@ -2,6 +2,7 @@
 
 #include "build.h"
 
+#include <QList>
 #include <QWidget>
 
 class QAction;
@@ -23,6 +24,9 @@ public:
     void setProjectDirectory(const QString &directory);
 
     BuildTarget target() const;
+
+    // The targets the project builds for, which are the only ones the bar offers. The target shown stays when it is still among them.
+    void setTargets(const QList<BuildTarget> &targets);
 
     // Switches to the first target that builds the platform, unless the current one already does, so choosing the PC page keeps a Windows or web target.
     void selectPlatform(Platform platform);
