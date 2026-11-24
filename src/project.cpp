@@ -152,6 +152,16 @@ void Project::setDeclaredPlatforms(const std::vector<Platform> &platforms)
     m_core.setDeclaredPlatforms(platforms);
 }
 
+Precision Project::precision(Platform platform) const
+{
+    return m_core.precision(platform);
+}
+
+void Project::setPrecision(Platform platform, Precision value)
+{
+    m_core.setPrecision(platform, value);
+}
+
 void Project::setVsync(bool value)
 {
     m_core.setVsync(value);

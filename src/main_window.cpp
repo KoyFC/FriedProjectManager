@@ -573,6 +573,11 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
         content->addWidget(packaging);
     }
 
+    if (fried::core::offersPrecision(platform))
+    {
+        content->addWidget(buildPrecision(platform, parent));
+    }
+
     if (platform == Platform::Vita)
     {
         QFormLayout *form = new QFormLayout;
@@ -607,6 +612,45 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
 
 
     return page;
+}
+
+QWidget *MainWindow::buildPrecision(Platform platform, QWidget *parent)
+{
+    QGroupBox *group = new QGroupBox(QStringLiteral("Precision"), parent);
+    QVBoxLayout *layout = new QVBoxLayout(group);
+    layout->addWidget(helpLabel(QStringLiteral("The width of Haxe's Float in this platform's build. Single is a 32-bit float, "
+                                               "faster where there is no floating point unit, as on the DS, but whole "
+                                               "numbers are exact only up to 16,777,216 and the clock must not be read "
+                                               "through a Float. Double is a 64-bit double. Takes effect at the next build."),
+                                group));
+
+    QComboBox *choice = new QComboBox(group);
+    for (const Precision value : {Precision::Single, Precision::Double})
+    {
+        QString label = value == Precision::Single ? QStringLiteral("Single (32-bit)") : QStringLiteral("Double (64-bit)");
+        if (value == fried::core::defaultPrecision(platform))
+        {
+            label += QStringLiteral(" (default)");
+        }
+        choice->addItem(label, static_cast<int>(value));
+    }
+    connect(choice, &QComboBox::currentIndexChanged, this, &MainWindow::showUnsavedState);
+    m_precisionChoices[indexOf(platform)] = choice;
+    layout->addWidget(choice, 0, Qt::AlignLeft);
+    return group;
+}
+
+bool MainWindow::hasUnsavedPrecision() const
+{
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        const QComboBox *choice = m_precisionChoices[indexOf(platform)];
+        if (choice && static_cast<Precision>(choice->currentData().toInt()) != m_project.precision(platform))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 QWidget *MainWindow::buildLiveArea(QWidget *parent)
@@ -1094,6 +1138,14 @@ void MainWindow::showProject()
     m_framerateChoice->setEnabled(!m_project.vsync());
     m_defaultTargetFramerate->setEnabled(!m_project.vsync());
     showPhysicsRate(m_project.physicsRate());
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        if (QComboBox *choice = m_precisionChoices[indexOf(platform)])
+        {
+            const QSignalBlocker blocker(choice);
+            choice->setCurrentIndex(choice->findData(static_cast<int>(m_project.precision(platform))));
+        }
+    }
     showDisplays();
 
     showIcons();
@@ -1131,6 +1183,7 @@ bool MainWindow::hasUnsavedEdits() const
            || hasUnsavedPlatforms()
            || chosenFramerate() != m_project.defaultTargetFramerate()
            || chosenPhysicsRate() != m_project.physicsRate()
+           || hasUnsavedPrecision()
            || hasUnsavedFiles();
 }
 
@@ -1492,6 +1545,13 @@ bool MainWindow::saveProject()
     m_project.setVsync(m_vsync->isChecked());
     m_project.setDefaultTargetFramerate(chosenFramerate());
     m_project.setPhysicsRate(chosenPhysicsRate());
+    for (const Platform platform : fried::core::s_platforms)
+    {
+        if (const QComboBox *choice = m_precisionChoices[indexOf(platform)])
+        {
+            m_project.setPrecision(platform, static_cast<Precision>(choice->currentData().toInt()));
+        }
+    }
     m_project.dropPlatformDisplays();
 
     QString error;

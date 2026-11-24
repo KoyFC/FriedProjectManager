@@ -40,6 +40,8 @@ public:
     bool vsync() const;
     int defaultTargetFramerate() const;
     int physicsRate() const;
+    // The width of Haxe's Float in the platform's build, which is the platform's default when the project does not say.
+    Precision precision(Platform platform) const;
     // Whether the engine builds the project for the platform, which it does for every one when the project declares none.
     bool declares(Platform platform) const;
 
@@ -53,6 +55,8 @@ public:
     void setVsync(bool value);
     void setDefaultTargetFramerate(int value);
     void setPhysicsRate(int value);
+    // The platform's default leaves no key behind.
+    void setPrecision(Platform platform, Precision value);
     // Declaring every platform or none leaves no key behind, which the engine reads as every platform.
     void setDeclaredPlatforms(const std::vector<Platform> &platforms);
     // A display of a platform's own is no longer read by the engine, so saving takes any out.

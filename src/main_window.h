@@ -57,6 +57,8 @@ private:
     QWidget *buildEnginePage();
     QWidget *buildPlatformPage(Platform platform);
     QWidget *buildPlatformIcon(Platform platform, QWidget *parent);
+    QWidget *buildPrecision(Platform platform, QWidget *parent);
+    bool hasUnsavedPrecision() const;
     QWidget *buildPackagingText(Platform platform, QWidget *parent);
     void showPackagingPlaceholders();
     QWidget *buildLiveArea(QWidget *parent);
@@ -140,6 +142,7 @@ private:
     QSpinBox *m_defaultTargetFramerate = nullptr;
     QComboBox *m_physicsRateChoice = nullptr;
     QSpinBox *m_physicsRate = nullptr;
+    std::array<QComboBox *, fried::core::s_platforms.size()> m_precisionChoices = {};
     QList<ImageFileEditor *> m_imageEditors;
     LiveAreaTemplateEditor *m_liveAreaTemplate = nullptr;
 
