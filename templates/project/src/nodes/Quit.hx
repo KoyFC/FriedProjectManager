@@ -13,7 +13,7 @@ class Quit extends Node {
 		super("Quit");
 	}
 
-	override function update():Void {
+	override function update(delta:Float):Void {
 		if (Input.isKeyDown(Key.Escape) || Input.isGamepadButtonDown(GamepadButton.Start)) {
 			Application.quit();
 		}
