@@ -80,6 +80,8 @@ qt_add_executable(fried_project_manager
     src/toolchain_panel.cpp
     src/storage_dialog.h
     src/storage_dialog.cpp
+    src/android_sdk.h
+    src/android_sdk.cpp
     src/emscripten_sdk.h
     src/emscripten_sdk.cpp
     src/windows_toolchain.h

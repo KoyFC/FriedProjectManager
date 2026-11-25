@@ -78,7 +78,7 @@ void ToolchainPanel::refresh()
 {
     for (Row &row : m_rows)
     {
-        const bool needsDownload = Build::needsCompilerDownload(row.target) || Build::needsEmscriptenDownload(row.target);
+        const bool needsDownload = Build::needsCompilerDownload(row.target) || Build::needsEmscriptenDownload(row.target) || Build::needsAndroidDownload(row.target);
 
         QString error;
         const QList<QStringList> commands = Build::commands(row.target, Build::Type::Debug, false, m_projectDirectory,

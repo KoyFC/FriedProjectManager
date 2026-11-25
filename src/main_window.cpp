@@ -3,6 +3,7 @@
 #include "asset_check.h"
 #include "asset_panel.h"
 #include "build.h"
+#include "android_sdk.h"
 #include "build_bar.h"
 #include "command_dialog.h"
 #include "display_editor.h"
@@ -611,7 +612,10 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
 
     ToolchainPanel *toolchain = new ToolchainPanel(platform, m_buildBar, parent);
     connect(toolchain, &ToolchainPanel::downloadRequested, this, [this](BuildTarget target) {
-        if (Build::needsCompilerDownload(target) ? downloadCompiler() : downloadEmscripten())
+        const bool downloaded = Build::needsCompilerDownload(target)  ? downloadCompiler()
+                                : Build::needsAndroidDownload(target) ? downloadAndroid()
+                                                                      : downloadEmscripten();
+        if (downloaded)
         {
             refreshToolchains();
         }
@@ -1377,6 +1381,11 @@ void MainWindow::buildProject()
         return;
     }
 
+    if (Build::needsAndroidDownload(target) && !downloadAndroid())
+    {
+        return;
+    }
+
     QString error;
     const QList<QStringList> commands =
         Build::commands(target, type, m_buildBar->logToFile(), m_project.directory(), m_buildBar->directory(), &error);
@@ -1500,6 +1509,47 @@ bool MainWindow::downloadEmscripten()
     }
 
     return true;
+}
+
+bool MainWindow::downloadAndroid()
+{
+#ifndef Q_OS_LINUX
+    QMessageBox::information(this, QStringLiteral("Android"),
+                             QStringLiteral("The Project Manager downloads the Android tools on Linux only for now. Set ANDROID_NDK_ROOT, "
+                                            "ANDROID_HOME and JAVA_HOME to tools installed by hand."));
+    return false;
+#else
+    const bool needsJdk = !Build::hasJdk();
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, QStringLiteral("Android tools"),
+        QStringLiteral("Building for Android needs the Android NDK, an SDK platform and its build-tools%1, which are not installed.\n\n"
+                       "The Project Manager can download them, about %2 GB, into %3 and build with them from then on. "
+                       "Downloading them means accepting the Android Software Development Kit License Agreement "
+                       "(https://developer.android.com/studio/terms)%4. Download them now?")
+            .arg(needsJdk ? QStringLiteral(" and a JDK") : QString(),
+                 needsJdk ? QStringLiteral("1") : QStringLiteral("0.8"),
+                 QDir::toNativeSeparators(QFileInfo(AndroidSdk::sdkDirectory()).absolutePath()),
+                 needsJdk ? QStringLiteral(" and the Eclipse Temurin JDK's GPLv2 with the Classpath Exception") : QString()));
+    if (answer != QMessageBox::Yes)
+    {
+        return false;
+    }
+
+    CommandDialog download(this, QStringLiteral("Download the Android tools"), m_project.directory(), AndroidSdk::beginInstall(needsJdk));
+    download.setActivity(QStringLiteral("Downloading"));
+    download.exec();
+
+    QString error;
+    if (!AndroidSdk::finishInstall(download.succeeded(), needsJdk, &error))
+    {
+        if (download.succeeded())
+        {
+            QMessageBox::warning(this, QStringLiteral("Android tools"), error);
+        }
+        return false;
+    }
+    return true;
+#endif
 }
 
 QString MainWindow::firstProblem(QLineEdit **field) const

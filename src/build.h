@@ -27,6 +27,10 @@ public:
     static bool needsCompilerDownload(BuildTarget target);
     // The web build, with no Emscripten SDK anywhere the tool looks.
     static bool needsEmscriptenDownload(BuildTarget target);
+    // The Android build, missing the NDK, the SDK or a JDK.
+    static bool needsAndroidDownload(BuildTarget target);
+    // Whether a JDK was found, so the Android download leaves it out.
+    static bool hasJdk();
     static QProcessEnvironment environment(BuildTarget target);
 
     // Empty when the platform cannot be built on this machine, with the reason in error.

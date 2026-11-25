@@ -79,6 +79,7 @@ private:
     void refreshAssetPanel(Platform platform);
     bool downloadCompiler();
     bool downloadEmscripten();
+    bool downloadAndroid();
     void showStorage();
     void chooseIcon();
     void showIcons();

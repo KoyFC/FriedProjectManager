@@ -1,8 +1,12 @@
 #include "storage.h"
 
 #include "editor_install.h"
+#include "android_sdk.h"
+#include "core_bridge.h"
 #include "emscripten_sdk.h"
 #include "windows_toolchain.h"
+
+#include <fried/core/android.h>
 
 #include <QDir>
 #include <QDirIterator>
@@ -85,6 +89,20 @@ QList<StorageItem> Storage::items()
         found << StorageItem{QFileInfo(emsdk).fileName(), QStringLiteral("Web"), emsdk,
                              StorageItem::Origin::ProjectManager, QFileInfo::exists(EmscriptenSdk::toolchainFile(emsdk))};
     }
+    const QString androidSdk = AndroidSdk::sdkDirectory();
+    if (QFileInfo::exists(androidSdk))
+    {
+        found << StorageItem{QStringLiteral("Android NDK and SDK"), QStringLiteral("Android"), androidSdk,
+                             StorageItem::Origin::ProjectManager,
+                             fried::core::android::isNdk(fromQt(AndroidSdk::ndkDirectory())) && fried::core::android::isSdk(fromQt(androidSdk))};
+    }
+    const QString jdk = AndroidSdk::jdkDirectory();
+    if (QFileInfo::exists(jdk))
+    {
+        found << StorageItem{QStringLiteral("JDK 21"), QStringLiteral("Android"), jdk, StorageItem::Origin::ProjectManager,
+                             fried::core::android::isJdk(fromQt(jdk))};
+    }
+
     // Each version of Fried Editor has a folder of its own, and one still being unpacked is named after the version it will be.
     const QDir editors(EditorInstall::versionsDirectory());
     for (const QFileInfo &folder : editors.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
@@ -101,6 +119,9 @@ QList<StorageItem> Storage::items()
     }
 
     appendSdk(found, QStringLiteral("Emscripten SDK"), QStringLiteral("Web"), qEnvironmentVariable("EMSDK"));
+
+    appendSdk(found, QStringLiteral("Android SDK"), QStringLiteral("Android"), qEnvironmentVariable("ANDROID_HOME"));
+    appendSdk(found, QStringLiteral("Android NDK"), QStringLiteral("Android"), qEnvironmentVariable("ANDROID_NDK_ROOT"));
 
     appendSdk(found, QStringLiteral("VitaSDK"), QStringLiteral("PlayStation Vita"), qEnvironmentVariable("VITASDK"));
     appendSdk(found, QStringLiteral("devkitPro"), QStringLiteral("Nintendo Switch, Nintendo 3DS and Nintendo DS"),

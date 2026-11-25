@@ -1,5 +1,6 @@
 #include "build.h"
 
+#include "android_sdk.h"
 #include "emscripten_sdk.h"
 #include "windows_toolchain.h"
 
@@ -8,8 +9,13 @@ namespace
     // What this machine has to build with.
     fried::core::Toolchains toolchains()
     {
-        fried::core::Toolchains found = fried::core::detectToolchains(
-            {fromQt(EmscriptenSdk::managedDirectory()), fromQt(WindowsToolchain::w64devkitDirectory())});
+        fried::core::ManagedTools managed;
+        managed.m_emscriptenSdk = fromQt(EmscriptenSdk::managedDirectory());
+        managed.m_w64devkit = fromQt(WindowsToolchain::w64devkitDirectory());
+        managed.m_androidNdk = fromQt(AndroidSdk::ndkDirectory());
+        managed.m_androidSdk = fromQt(AndroidSdk::sdkDirectory());
+        managed.m_javaHome = fromQt(AndroidSdk::jdkDirectory());
+        fried::core::Toolchains found = fried::core::detectToolchains(managed);
         found.m_visualStudioCmake = fried::core::visualStudioCmake();
         return found;
     }
@@ -28,6 +34,16 @@ namespace
 bool Build::needsEmscriptenDownload(BuildTarget target)
 {
     return fried::core::Build::needsEmscriptenDownload(target, toolchains());
+}
+
+bool Build::needsAndroidDownload(BuildTarget target)
+{
+    return fried::core::Build::needsAndroidDownload(target, toolchains());
+}
+
+bool Build::hasJdk()
+{
+    return !toolchains().m_javaHome.empty();
 }
 
 bool Build::needsCompilerDownload(BuildTarget target)
