@@ -26,7 +26,11 @@
 #include "recent_projects.h"
 #include "windows_toolchain.h"
 
+#include <fried/core/android.h>
+
 #include <QCheckBox>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QComboBox>
 #include <QDir>
 #include <QFile>
@@ -76,7 +80,7 @@ namespace
 
     // Every platform in the order the sidebar and the icons page list them.
     const QList<Platform> s_platforms = {Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds,
-                                      Platform::NintendoDs, Platform::Cg50};
+                                      Platform::NintendoDs, Platform::Cg50, Platform::Android};
 
     int indexOf(Platform platform)
     {
@@ -557,6 +561,11 @@ QWidget *MainWindow::buildPlatformPage(Platform platform)
                                      "beside it, in a folder of that name the build writes next to it, and both "
                                      "are copied to the root of the calculator's storage.");
         break;
+    case Platform::Android:
+        description = QStringLiteral("An Android .apk is labeled with the name and version on the General page, and "
+                                     "named on the device by its package below. It is built for arm64 phones and signed "
+                                     "with the debug key.");
+        break;
     default:
         description = QStringLiteral("The game on the desktop: built for this system, for Windows from another system, and for the web.");
         break;
@@ -900,6 +909,12 @@ QWidget *MainWindow::buildPackagingText(Platform platform, QWidget *parent)
                  {QStringLiteral("subtitle2"), QStringLiteral("Third line"), limit,
                   QStringLiteral("Empty shows the version. At most %1 characters.").arg(limit)}};
     }
+    else if (platform == Platform::Android)
+    {
+        section = QStringLiteral("android");
+        lines = {{QStringLiteral("package"), QStringLiteral("Package"), 255,
+                  QStringLiteral("How Android tells this game from another, such as com.example.mygame. Empty uses the one shown.")}};
+    }
     else
     {
         return nullptr;
@@ -912,12 +927,17 @@ QWidget *MainWindow::buildPackagingText(Platform platform, QWidget *parent)
         QLineEdit *edit = addField(form, group, line.label, line.help);
         // Typing or pasting past the limit stops there, so the text can never be one the engine refuses.
         edit->setMaxLength(line.limit);
+        if (line.key == QStringLiteral("package"))
+        {
+            edit->setValidator(new QRegularExpressionValidator(QRegularExpression(QStringLiteral("[A-Za-z0-9_.]*")), edit));
+        }
         m_packagingFields.append({section, line.key, edit});
     }
 
     // What an empty line falls back to follows the identity it comes from.
     connect(m_organization, &QLineEdit::textChanged, this, &MainWindow::showPackagingPlaceholders);
     connect(m_version, &QLineEdit::textChanged, this, &MainWindow::showPackagingPlaceholders);
+    connect(m_name, &QLineEdit::textChanged, this, &MainWindow::showPackagingPlaceholders);
     showPackagingPlaceholders();
     return group;
 }
@@ -927,6 +947,12 @@ void MainWindow::showPackagingPlaceholders()
     const QString version = QStringLiteral("Version %1").arg(m_version->text());
     for (const PackagingField &field : std::as_const(m_packagingFields))
     {
+        if (field.key == QStringLiteral("package"))
+        {
+            field.edit->setPlaceholderText(
+                toQt(fried::core::android::defaultPackage(fromQt(m_organization->text()), fromQt(m_name->text()))));
+            continue;
+        }
         field.edit->setPlaceholderText(field.key == QStringLiteral("subtitle1") ? m_organization->text() : version);
     }
 }
@@ -1538,7 +1564,14 @@ bool MainWindow::saveProject()
     m_project.setVitaTitleId(m_vitaTitleId->text());
     for (const PackagingField &field : m_packagingFields)
     {
-        m_project.setPackagingText(field.section, field.key, field.edit->text());
+        QString value = field.edit->text();
+        if (field.section == QStringLiteral("android") && field.key == QStringLiteral("package"))
+        {
+            // A package Android would refuse is repaired and shown as saved, not left for the build to fail on.
+            value = toQt(fried::core::android::sanitizedPackage(fromQt(value)));
+            field.edit->setText(value);
+        }
+        m_project.setPackagingText(field.section, field.key, value);
     }
     m_project.setDisplay(m_sharedDisplay);
     m_project.setDeclaredPlatforms(declared);
