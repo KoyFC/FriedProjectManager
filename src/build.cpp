@@ -4,6 +4,8 @@
 #include "emscripten_sdk.h"
 #include "windows_toolchain.h"
 
+#include <QProcess>
+
 namespace
 {
     // What this machine has to build with.
@@ -49,6 +51,55 @@ bool Build::hasJdk()
 bool Build::needsCompilerDownload(BuildTarget target)
 {
     return fried::core::Build::needsCompilerDownload(target, toolchains());
+}
+
+bool Build::hasAdb()
+{
+    return !toolchains().m_adb.empty();
+}
+
+QList<fried::core::android::Device> Build::devices()
+{
+    const QString adb = toQt(toolchains().m_adb);
+    if (adb.isEmpty())
+    {
+        return {};
+    }
+
+    QProcess process;
+    process.start(adb, {QStringLiteral("devices")});
+    if (!process.waitForFinished(15000))
+    {
+        process.kill();
+        return {};
+    }
+    const std::vector<fried::core::android::Device> listed =
+        fried::core::android::parseDevices(process.readAllStandardOutput().toStdString());
+    return QList<fried::core::android::Device>(listed.begin(), listed.end());
+}
+
+QString Build::apkIn(const QString &buildDirectory)
+{
+    return toQt(fried::core::android::findApk(fromQt(buildDirectory)));
+}
+
+QList<QStringList> Build::installCommands(const QString &apk, const QString &package, const QString &serial, QString *error)
+{
+    std::string reason;
+    const std::vector<fried::core::BuildStep> steps =
+        fried::core::Build::androidInstallSteps(fromQt(apk), fromQt(package), fromQt(serial), toolchains(), &reason);
+    if (steps.empty())
+    {
+        *error = toQt(reason);
+        return {};
+    }
+
+    QList<QStringList> commands;
+    for (const fried::core::BuildStep &step : steps)
+    {
+        commands << argumentsOf(step);
+    }
+    return commands;
 }
 
 QProcessEnvironment Build::environment(BuildTarget target)

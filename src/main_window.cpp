@@ -33,6 +33,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QComboBox>
+#include <QInputDialog>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -1402,6 +1403,11 @@ void MainWindow::buildProject()
     build.offerToOpen(QStringLiteral("Open Build Folder"), QDir(m_project.directory()).filePath(m_buildBar->directory()));
     build.exec();
 
+    if (build.succeeded() && m_buildBar->installAfterBuild())
+    {
+        installOnDevice(m_buildBar->directory());
+    }
+
     statusBar()->showMessage(build.succeeded()
                                  ? QStringLiteral("Built %1 for %2").arg(m_project.name(), toQt(buildTargetName(target)))
                                  : QStringLiteral("Build for %1 did not finish").arg(toQt(buildTargetName(target))));
@@ -1509,6 +1515,63 @@ bool MainWindow::downloadEmscripten()
     }
 
     return true;
+}
+
+void MainWindow::installOnDevice(const QString &buildDirectory)
+{
+    const QString apk = Build::apkIn(QDir(m_project.directory()).filePath(buildDirectory));
+    if (apk.isEmpty())
+    {
+        QMessageBox::warning(this, QStringLiteral("Install on device"),
+                             QStringLiteral("The build left no .apk in %1.").arg(QDir::toNativeSeparators(buildDirectory)));
+        return;
+    }
+
+    QStringList ready;
+    QStringList waiting;
+    for (const fried::core::android::Device &device : Build::devices())
+    {
+        (device.isReady() ? ready : waiting) << toQt(device.m_serial) + (device.isReady() ? QString() : QStringLiteral(" (%1)").arg(toQt(device.m_state)));
+    }
+
+    if (ready.isEmpty())
+    {
+        QMessageBox::information(
+            this, QStringLiteral("Install on device"),
+            waiting.isEmpty()
+                ? QStringLiteral("No device is connected. Connect a phone with USB debugging turned on, or start an emulator, "
+                                 "and build again to install the game on it. The APK is at %1.")
+                      .arg(QDir::toNativeSeparators(apk))
+                : QStringLiteral("A device is connected but not ready: %1.\n\nOn the phone, allow USB debugging for this computer, "
+                                 "and build again. The APK is at %2.")
+                      .arg(waiting.join(QStringLiteral(", ")), QDir::toNativeSeparators(apk)));
+        return;
+    }
+
+    QString serial = ready.first();
+    if (ready.size() > 1)
+    {
+        bool chosen = false;
+        serial = QInputDialog::getItem(this, QStringLiteral("Install on device"), QStringLiteral("Install on:"), ready, 0, false, &chosen);
+        if (!chosen)
+        {
+            return;
+        }
+    }
+
+    const QString package = toQt(fried::core::android::packageOf(fromQt(m_project.packagingText(QStringLiteral("android"), QStringLiteral("package"))),
+                                                                  fromQt(m_project.organization()), fromQt(m_project.name())));
+    QString error;
+    const QList<QStringList> commands = Build::installCommands(apk, package, serial, &error);
+    if (commands.isEmpty())
+    {
+        QMessageBox::warning(this, QStringLiteral("Install on device"), error);
+        return;
+    }
+
+    CommandDialog install(this, QStringLiteral("Install on %1").arg(serial), m_project.directory(), commands);
+    install.setActivity(QStringLiteral("Installing"));
+    install.exec();
 }
 
 bool MainWindow::downloadAndroid()

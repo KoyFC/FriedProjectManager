@@ -28,6 +28,10 @@ namespace
     const Archive s_buildTools = {QStringLiteral("https://dl.google.com/android/repository/build-tools_r35.0.1_linux.zip"),
                                   QStringLiteral("build-tools_r35.0.1_linux.zip"), QStringLiteral("sha1sum"),
                                   QStringLiteral("e009a9b188cfeb1d2b4c318ab5cb4f1ddc368861")};
+    // What installs a build on a phone. Not needed to build, so an SDK without it is still complete.
+    const Archive s_platformTools = {QStringLiteral("https://dl.google.com/android/repository/platform-tools_r37.0.3-linux.zip"),
+                                     QStringLiteral("platform-tools_r37.0.3-linux.zip"), QStringLiteral("sha1sum"),
+                                     QStringLiteral("e1579b288a7ae4e9bc28dedec6a154d78b3c04ed")};
     const Archive s_jdk = {QStringLiteral("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13.1%2B2/"
                                           "OpenJDK21U-jdk_x64_linux_hotspot_21.0.13.1_2.tar.gz"),
                            QStringLiteral("OpenJDK21U-jdk_x64_linux_hotspot_21.0.13.1_2.tar.gz"), QStringLiteral("sha256sum"),
@@ -37,6 +41,7 @@ namespace
     const QString s_ndkFolder = QStringLiteral("android-ndk-r27d");
     const QString s_platformFolder = QStringLiteral("android-35");
     const QString s_buildToolsFolder = QStringLiteral("android-15");
+    const QString s_platformToolsFolder = QStringLiteral("platform-tools");
     const QString s_jdkFolder = QStringLiteral("jdk-21.0.13.1+2");
 
     QString toolsDirectory()
@@ -95,7 +100,7 @@ QList<QStringList> AndroidSdk::beginInstall(bool needsJdk)
     QDir().mkpath(unpackDirectory());
 
     QList<QStringList> commands;
-    for (const Archive *archive : {&s_ndk, &s_platform, &s_buildTools})
+    for (const Archive *archive : {&s_ndk, &s_platform, &s_buildTools, &s_platformTools})
     {
         commands << fetch(*archive);
         commands << QStringList{QStringLiteral("unzip"), QStringLiteral("-q"), QStringLiteral("-o"), downloadPath(*archive),
@@ -116,7 +121,8 @@ bool AndroidSdk::finishInstall(bool unpacked, bool needsJdk, QString *error)
     {
         unpacked = moveInto(s_ndkFolder, ndkDirectory()) &&
                    moveInto(s_platformFolder, QDir(sdk).filePath(QStringLiteral("platforms/%1").arg(fried::core::android::s_platform))) &&
-                   moveInto(s_buildToolsFolder, QDir(sdk).filePath(QStringLiteral("build-tools/%1").arg(fried::core::android::s_buildTools)));
+                   moveInto(s_buildToolsFolder, QDir(sdk).filePath(QStringLiteral("build-tools/%1").arg(fried::core::android::s_buildTools))) &&
+                   moveInto(s_platformToolsFolder, QDir(sdk).filePath(s_platformToolsFolder));
         if (unpacked && needsJdk)
         {
             unpacked = moveInto(s_jdkFolder, jdkDirectory());

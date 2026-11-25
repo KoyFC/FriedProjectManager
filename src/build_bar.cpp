@@ -47,6 +47,11 @@ namespace
     {
         return rememberedKey(QStringLiteral("buildLogToFile"), project, target);
     }
+
+    QString installKey(const QString &project, BuildTarget target)
+    {
+        return rememberedKey(QStringLiteral("buildInstall"), project, target);
+    }
 }
 
 BuildBar::BuildBar(QWidget *parent, QAction *build)
@@ -68,6 +73,9 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     m_logToFile->setToolTip(QStringLiteral("The build writes its log to Player.log in the game's user data folder, "
                                            "as well as to the console."));
 
+    m_install = new QCheckBox(QStringLiteral("Install on device"), this);
+    m_install->hide();
+
     m_directory = new QLineEdit(this);
     m_directory->setPlaceholderText(QStringLiteral("Build directory"));
 
@@ -88,6 +96,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     controls->addWidget(m_target);
     controls->addWidget(m_type);
     controls->addWidget(m_logToFile);
+    controls->addWidget(m_install);
     controls->addWidget(m_directory, 1);
     controls->addWidget(browse);
     controls->addWidget(m_reset);
@@ -100,6 +109,7 @@ BuildBar::BuildBar(QWidget *parent, QAction *build)
     connect(m_target, &QComboBox::currentIndexChanged, this, &BuildBar::showRemembered);
     connect(m_type, &QComboBox::currentIndexChanged, this, &BuildBar::rememberType);
     connect(m_logToFile, &QCheckBox::toggled, this, &BuildBar::rememberLogToFile);
+    connect(m_install, &QCheckBox::toggled, this, &BuildBar::rememberInstall);
     connect(browse, &QPushButton::clicked, this, &BuildBar::chooseDirectory);
     connect(m_reset, &QPushButton::clicked, this, &BuildBar::resetDirectory);
     connect(m_directory, &QLineEdit::editingFinished, this, &BuildBar::rememberDirectory);
@@ -161,6 +171,11 @@ bool BuildBar::logToFile() const
     return m_logToFile->isChecked();
 }
 
+bool BuildBar::installAfterBuild() const
+{
+    return target() == BuildTarget::Android && m_install->isChecked();
+}
+
 // Whatever follows the token is relative to the project; anything else stands on its own.
 QString BuildBar::directory() const
 {
@@ -183,6 +198,7 @@ void BuildBar::remember()
     rememberDirectory();
     rememberType();
     rememberLogToFile();
+    rememberInstall();
 }
 
 void BuildBar::showRemembered()
@@ -198,6 +214,9 @@ void BuildBar::showRemembered()
     const QSignalBlocker logBlocker(m_logToFile);
     m_type->setCurrentIndex(comboIndexOf(Build::typeNamed(type)));
     m_logToFile->setChecked(settings.value(logToFileKey(m_projectDirectory, target()), false).toBool());
+    const QSignalBlocker installBlocker(m_install);
+    m_install->setChecked(settings.value(installKey(m_projectDirectory, target()), false).toBool());
+    showInstallChoice();
     showDirectory(directory);
 
     // The text may not have changed, but the target it is checked against has.
@@ -308,4 +327,28 @@ QString BuildBar::vitaSpaceProblem() const
     return QStringLiteral("A Vita build will compile but fail to be packaged: VitaSDK does not quote the paths it "
                           "packs with, and there is a space in %1.")
         .arg(spaced.join(QStringLiteral(" and in ")));
+}
+
+// Only an Android build has a device to install on, and only with an adb to reach it.
+void BuildBar::showInstallChoice()
+{
+    const bool isAndroid = target() == BuildTarget::Android;
+    m_install->setVisible(isAndroid);
+    const bool hasAdb = Build::hasAdb();
+    m_install->setEnabled(hasAdb);
+    m_install->setToolTip(hasAdb ? QStringLiteral("Once the build succeeds, installs it on the connected phone and starts it, as adb install does.")
+                                 : QStringLiteral("There is no adb. It comes with the Android SDK's platform-tools, which the Android download "
+                                                  "adds, or which can be put on the PATH."));
+}
+
+void BuildBar::rememberInstall()
+{
+    if (m_projectDirectory.isEmpty())
+    {
+        return;
+    }
+
+    QSettings settings;
+    settings.setValue(installKey(m_projectDirectory, target()), m_install->isChecked());
+    emit changed();
 }

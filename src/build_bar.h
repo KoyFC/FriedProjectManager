@@ -32,6 +32,8 @@ public:
     void selectPlatform(Platform platform);
     Build::Type type() const;
     bool logToFile() const;
+    // Android only: install the build on the connected device once it has built.
+    bool installAfterBuild() const;
 
     // Relative to the project, unless it was given as an absolute path.
     QString directory() const;
@@ -50,6 +52,8 @@ private:
     void resetDirectory();
     void rememberType();
     void rememberLogToFile();
+    void rememberInstall();
+    void showInstallChoice();
     void rememberDirectory();
     QString vitaSpaceProblem() const;
 
@@ -58,6 +62,7 @@ private:
     QComboBox *m_target = nullptr;
     QComboBox *m_type = nullptr;
     QCheckBox *m_logToFile = nullptr;
+    QCheckBox *m_install = nullptr;
     QLineEdit *m_directory = nullptr;
     QPushButton *m_reset = nullptr;
     QLabel *m_warning = nullptr;

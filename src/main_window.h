@@ -80,6 +80,8 @@ private:
     bool downloadCompiler();
     bool downloadEmscripten();
     bool downloadAndroid();
+    // Installs the APK the Android build left in this folder on a connected device and starts it.
+    void installOnDevice(const QString &buildDirectory);
     void showStorage();
     void chooseIcon();
     void showIcons();
