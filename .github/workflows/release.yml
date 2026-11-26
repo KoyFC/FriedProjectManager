@@ -134,9 +134,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -l assets
+
+          # The notes are the version's section of CHANGELOG.md.
+          awk -v v="v${{ inputs.version }}" '$1 == "##" && $2 == v {f=1; next} /^## /{f=0} f' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section for v${{ inputs.version }}" >&2
+            exit 1
+          fi
+
           gh release create "v${{ inputs.version }}" assets/* \
             --repo ${{ github.repository }} \
             --target ${{ github.sha }} \
             --title "Fried Project Manager ${{ inputs.version }}" \
-            --generate-notes \
+            --notes-file notes.md \
             --draft
