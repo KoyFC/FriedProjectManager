@@ -7,7 +7,7 @@ All notable changes to Fried Project Manager are written here, newest version fi
 - Each section uses `Added`, `Changed`, `Fixed` and `Removed`, and leaves out the ones it has no entries for.
 - The Release workflow copies a version's section into its GitHub release, see [Releasing](https://koyfc.github.io/FriedProjectManager/development/releasing/).
 
-## vX.Y.Z
+## v0.5.0 - 2026-11-26
 
 ### Added
 - Android page: download the Android tools and install the build on a connected device.
