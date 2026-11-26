@@ -53,4 +53,6 @@ nav:
       - architecture/storage.md
       - architecture/command-window.md
       - architecture/settings.md
+  - Development:
+      - development/releasing.md
   - License: https://github.com/KoyFC/FriedProjectManager/blob/main/LICENSE
