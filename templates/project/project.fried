@@ -1,18 +1,13 @@
-{
-	"name": "@NAME@",
-	"organization": "@ORGANIZATION@",
-	"version": "@VERSION@",
-	"window": {
-		"title": "@NAME@"
-	},
-	"startScene": "main",
-	"display": {
-		"width": 960,
-		"height": 540,
-		"mode": "expand",
-		"filter": "nearest"
-	},
-	"vita": {
-		"titleId": "@TITLE_ID@"
-	}
-}
+display:
+  filter: nearest
+  height: 540
+  mode: expand
+  width: 960
+name: "@NAME@"
+organization: "@ORGANIZATION@"
+startScene: main
+version: "@VERSION@"
+vita:
+  titleId: "@TITLE_ID@"
+window:
+  title: "@NAME@"

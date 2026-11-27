@@ -38,6 +38,7 @@ public:
 
     // Both show their own error and leave the open project as it was.
     bool openProject(const QString &directory);
+    bool offerYamlMigration(const QString &directory);
     bool saveProject();
 
 private:

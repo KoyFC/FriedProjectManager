@@ -1,0 +1,25 @@
+version: 2
+name: Main
+camera: camera
+nodes:
+  - type: Node
+    id: main-root
+    name: Main
+    children:
+      - type: Camera
+        id: camera
+        name: Camera
+        x: 480
+        y: 270
+        zoom: 1
+      - type: Sprite
+        id: square
+        name: Square
+        scaleX: 10
+        scaleY: 10
+        texture: {root: game, path: white.png}
+        x: 400
+        y: 190
+      - type: Quit
+        id: quit
+        name: Quit

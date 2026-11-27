@@ -7,6 +7,14 @@ All notable changes to Fried Project Manager are written here, newest version fi
 - Each section uses `Added`, `Changed`, `Fixed` and `Removed`, and leaves out the ones it has no entries for.
 - The Release workflow copies a version's section into its GitHub release, see [Releasing](https://koyfc.github.io/FriedProjectManager/development/releasing/).
 
+## vX.Y.Z
+
+### Added
+- A project whose project file, scenes or import settings are written in JSON is offered a conversion to YAML when it opens, with a backup of the originals in `.fried/json-backup/`.
+
+### Changed
+- New projects have their project file and template scene written in YAML.
+
 ## v0.5.0 - 2026-11-26
 
 ### Added

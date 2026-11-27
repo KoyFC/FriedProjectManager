@@ -1,4 +1,5 @@
 #include "main_window.h"
+#include <fried/core/migration.h>
 
 #include "asset_check.h"
 #include "asset_panel.h"
@@ -1138,9 +1139,54 @@ bool MainWindow::openProject(const QString &directory)
         return false;
     }
 
+    if (offerYamlMigration(directory))
+    {
+        if (!project.load(directory, &error))
+        {
+            QMessageBox::warning(this, QStringLiteral("Open Project"), error);
+            return false;
+        }
+    }
+
     m_project = project;
     RecentProjects::remember(directory);
     showProject();
+    return true;
+}
+
+// A project whose files are still JSON is offered the YAML the engine now writes. The files load either way, so declining costs nothing. Returns whether they were rewritten.
+bool MainWindow::offerYamlMigration(const QString &directory)
+{
+    const std::string path = directory.toUtf8().toStdString();
+    if (!fried::core::needsYamlMigration(path))
+    {
+        return false;
+    }
+
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, QStringLiteral("Convert Project to YAML"),
+        QStringLiteral("The project file, scenes and import settings of this project are written in JSON. The engine reads YAML, which has comments and is easier to edit by hand, and the JSON files still work until they are converted.\n\n"
+                       "Convert them now? The originals are copied to .fried/json-backup first."),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    if (answer != QMessageBox::Yes)
+    {
+        return false;
+    }
+
+    fried::core::MigrationReport report;
+    std::string error;
+    if (!fried::core::migrateToYaml(path, &report, &error))
+    {
+        QMessageBox::warning(this, QStringLiteral("Convert Project to YAML"), QString::fromStdString(error));
+        return false;
+    }
+
+    QString summary = QStringLiteral("Converted %1 files. The originals are in %2.").arg(report.m_converted.size()).arg(QString::fromStdString(report.m_backupDirectory));
+    for (const std::string &failure : report.m_failed)
+    {
+        summary += QStringLiteral("\nLeft alone: %1").arg(QString::fromStdString(failure));
+    }
+    QMessageBox::information(this, QStringLiteral("Convert Project to YAML"), summary);
     return true;
 }
 
